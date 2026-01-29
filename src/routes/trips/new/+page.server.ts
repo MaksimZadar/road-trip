@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, type Redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -69,8 +69,16 @@ export const actions: Actions = {
 
 			return redirect(303, `/trips/${newTrip.id}`);
 		} catch (error) {
+			if (isRedirect(error)) {
+				throw error;
+			}
 			console.error('Error creating trip:', error);
 			return fail(500, { message: 'Internal server error' });
 		}
 	}
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isRedirect(error: any): error is Redirect {
+	return 'status' in error && 'location' in error;
+}
