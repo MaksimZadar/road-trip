@@ -1,23 +1,25 @@
-You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+# Agent Instructions: Svelte & SvelteKit
 
-## Available MCP Tools:
+You have access to the Svelte MCP server for comprehensive Svelte 5 and SvelteKit documentation.
 
-### 1. list-sections
+## Svelte MCP Tools
 
-Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
-When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+### 1. Discovery & Documentation
 
-### 2. get-documentation
+- **list-sections**: Run this **FIRST** for any Svelte/SvelteKit query to discover relevant documentation.
+- **get-documentation**: After listing sections, analyze the `use_cases` and fetch **ALL** relevant documentation sections at once.
 
-Retrieves full documentation content for specific sections. Accepts single or multiple sections.
-After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+### 2. Code Quality & Validation
 
-### 3. svelte-autofixer
+- **svelte-autofixer**: You **MUST** run this on any Svelte code before presenting it to the user. Iterate until no issues remain.
+- **playground-link**: Offer a playground link only after code is finalized and **ONLY** if the code was not written directly to the project files.
 
-Analyzes Svelte code and returns issues and suggestions.
-You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+## Documentation Searching
 
-### 4. playground-link
+For general library or framework documentation outside of Svelte, use the `context7` tools.
 
-Generates a Svelte Playground link with the provided code.
-After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.
+## Workflow Requirements
+
+1.  **Always** start Svelte tasks with `list-sections`.
+2.  **Always** validate Svelte components with `svelte-autofixer`.
+3.  **Always** fetch documentation in batches to minimize tool calls.
