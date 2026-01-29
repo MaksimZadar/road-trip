@@ -56,10 +56,10 @@ export const roadTripStops = pgTable(
 	{
 		roadTripId: uuid('road_trip_id')
 			.notNull()
-			.references(() => roadTrip.id),
+			.references(() => roadTrip.id, { onDelete: 'cascade' }),
 		placeId: uuid('place_id')
 			.notNull()
-			.references(() => places.id),
+			.references(() => places.id, { onDelete: 'cascade' }),
 		order: integer('order').notNull()
 	},
 	(t) => [primaryKey({ columns: [t.roadTripId, t.placeId] })]

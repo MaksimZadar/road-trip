@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { enhance } from '$app/forms';
 	import {
 		CalendarIcon,
 		MapPin,
@@ -9,7 +10,8 @@
 		Flag,
 		Circle,
 		ChevronDown,
-		ChevronUp
+		ChevronUp,
+		Trash2
 	} from '@lucide/svelte';
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
@@ -28,11 +30,23 @@
 </script>
 
 <div class="container mx-auto max-w-3xl py-10">
-	<div class="mb-6">
+	<div class="mb-6 flex items-center justify-between">
 		<Button variant="ghost" href="/trips" class="pl-0 hover:bg-transparent">
 			<ChevronLeft class="mr-1 h-4 w-4" />
 			Back to Trips
 		</Button>
+
+		<form action="?/delete" method="POST" use:enhance>
+			<Button
+				type="submit"
+				variant="outline"
+				size="sm"
+				class="hover:text-destructive-foreground text-destructive hover:bg-destructive"
+			>
+				<Trash2 class="mr-2 h-4 w-4" />
+				Delete Trip
+			</Button>
+		</form>
 	</div>
 
 	<div class="space-y-8">

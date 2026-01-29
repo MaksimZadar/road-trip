@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { CalendarIcon, MapPin, ArrowRight, Plus } from '@lucide/svelte';
+	import { CalendarIcon, MapPin, ArrowRight, Plus, Trash2 } from '@lucide/svelte';
 	import { DateFormatter } from '@internationalized/date';
 
 	let { data } = $props();
@@ -87,10 +88,22 @@
 							</div>
 						</div>
 					</Card.Content>
-					<Card.Footer class="pt-3">
-						<Button variant="secondary" size="sm" class="w-full" href="/trips/{trip.id}">
+					<Card.Footer class="flex gap-2 pt-3">
+						<Button variant="secondary" size="sm" class="flex-1" href="/trips/{trip.id}">
 							View Details
 						</Button>
+						<form action="?/delete" method="POST" use:enhance>
+							<input type="hidden" name="id" value={trip.id} />
+							<Button
+								type="submit"
+								variant="outline"
+								size="sm"
+								class="hover:text-destructive-foreground px-2 text-destructive hover:bg-destructive"
+								aria-label="Delete trip"
+							>
+								<Trash2 class="h-4 w-4" />
+							</Button>
+						</form>
 					</Card.Footer>
 				</Card.Root>
 			{/each}

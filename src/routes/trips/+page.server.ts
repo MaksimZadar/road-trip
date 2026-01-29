@@ -1,5 +1,7 @@
 import { db } from '$lib/server/db';
-import type { PageServerLoad } from './$types';
+import { roadTrip, roadTripStops } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const showPast = url.searchParams.get('showPast') === 'true';
@@ -19,4 +21,18 @@ export const load: PageServerLoad = async ({ url }) => {
 		trips,
 		showPast
 	};
+};
+
+export const actions: Actions = {
+	delete: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		if (!id) return { success: false };
+
+		await db.delete(roadTripStops).where(eq(roadTripStops.roadTripId, id));
+		await db.delete(roadTrip).where(eq(roadTrip.id, id));
+
+		return { success: true };
+	}
 };
