@@ -23,3 +23,7 @@ For general library or framework documentation outside of Svelte, use the `conte
 1.  **Always** start Svelte tasks with `list-sections`.
 2.  **Always** validate Svelte components with `svelte-autofixer`.
 3.  **Always** fetch documentation in batches to minimize tool calls.
+
+## Tooling
+
+1. Use pnpm instead of npm
