@@ -13,7 +13,6 @@
 	} from '@lucide/svelte';
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
-	import { resolve } from '$app/paths';
 
 	let { data } = $props();
 

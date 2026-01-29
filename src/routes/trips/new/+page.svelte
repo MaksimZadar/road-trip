@@ -7,7 +7,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Calendar } from '$lib/components/ui/calendar/index.js';
 	import PlaceSearch from '$lib/components/PlaceSearch.svelte';
-	import { CalendarIcon, Plus, Trash2 } from '@lucide/svelte';
+	import { CalendarIcon, Plus, Trash2, ChevronLeft } from '@lucide/svelte';
 	import { cn } from '$lib/utils.js';
 	import { DateFormatter, type DateValue, getLocalTimeZone, today } from '@internationalized/date';
 
@@ -44,7 +44,14 @@
 	}
 </script>
 
-<div class="container max-w-2xl py-10">
+<div class="container mx-auto max-w-2xl py-10">
+	<div class="mb-6">
+		<Button variant="ghost" href="/trips" class="pl-0 hover:bg-transparent">
+			<ChevronLeft class="mr-1 h-4 w-4" />
+			Back to Trips
+		</Button>
+	</div>
+
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Create New Road Trip</Card.Title>
