@@ -7,7 +7,7 @@
 
 	let { value = $bindable(''), onSelect } = $props<{
 		value?: string;
-		onSelect?: (place: { name: string; display_name: string }) => void;
+		onSelect?: (place: { name: string; display_name: string; lat: number; lon: number }) => void;
 	}>();
 
 	let open = $state(false);
@@ -60,7 +60,9 @@
 		if (onSelect) {
 			onSelect({
 				name: place.name || place.display_name.split(',')[0],
-				display_name: place.display_name
+				display_name: place.display_name,
+				lat: place.lat,
+				lon: place.lon
 			});
 		}
 	}

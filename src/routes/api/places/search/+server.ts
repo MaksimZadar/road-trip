@@ -36,7 +36,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			return {
 				name: p.name || uniqueParts[0],
 				display_name: uniqueParts.join(', '),
-				place_id: `${p.osm_type}-${p.osm_id}`
+				place_id: `${p.osm_type}-${p.osm_id}`,
+				lat: feature.geometry.coordinates[1],
+				lon: feature.geometry.coordinates[0]
 			};
 		});
 

@@ -11,7 +11,8 @@
 		Circle,
 		ChevronDown,
 		ChevronUp,
-		Trash2
+		Trash2,
+		Route
 	} from '@lucide/svelte';
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
@@ -27,6 +28,21 @@
 	function getDirectionsUrl(from: string, to: string) {
 		return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`;
 	}
+
+	function formatDistance(meters: number | null) {
+		if (meters === null) return '';
+		const km = meters / 1000;
+		return `${km.toFixed(1)} km`;
+	}
+
+	function formatDuration(seconds: number | null) {
+		if (seconds === null) return '';
+		const mins = Math.round(seconds / 60);
+		if (mins < 60) return `${mins} min`;
+		const hours = Math.floor(mins / 60);
+		const remainingMins = mins % 60;
+		return `${hours}h ${remainingMins}m`;
+	}
 </script>
 
 <div class="container mx-auto max-w-3xl py-10">
@@ -36,17 +52,27 @@
 			Back to Trips
 		</Button>
 
-		<form action="?/delete" method="POST" use:enhance>
-			<Button
-				type="submit"
-				variant="outline"
-				size="sm"
-				class="hover:text-destructive-foreground text-destructive hover:bg-destructive"
-			>
-				<Trash2 class="mr-2 h-4 w-4" />
-				Delete Trip
-			</Button>
-		</form>
+		<div class="flex gap-2">
+			{#if data.hasMissingDistances}
+				<form action="?/calculateDistances" method="POST" use:enhance>
+					<Button type="submit" variant="outline" size="sm">
+						<Route class="mr-2 h-4 w-4" />
+						Calculate Distances
+					</Button>
+				</form>
+			{/if}
+			<form action="?/delete" method="POST" use:enhance>
+				<Button
+					type="submit"
+					variant="outline"
+					size="sm"
+					class="hover:text-destructive-foreground text-destructive hover:bg-destructive"
+				>
+					<Trash2 class="mr-2 h-4 w-4" />
+					Delete Trip
+				</Button>
+			</form>
+		</div>
 	</div>
 
 	<div class="space-y-8">
@@ -100,11 +126,25 @@
 									</div>
 									<div class="w-0.5 grow bg-muted"></div>
 								</div>
-								<div
-									class="group mb-8 block flex-1 rounded-lg border border-border p-3 transition-colors"
-								>
-									<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
-									<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
+								<div class="mb-2 flex-1">
+									<div
+										class="group block flex-1 rounded-lg border border-border p-3 transition-colors"
+									>
+										<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
+										<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
+									</div>
+									<!-- Distance between Origin and First Stop/Destination -->
+									{#if data.routes[0]}
+										{@const route = data.routes[0]}
+										<div class="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+											<Route class="h-3 w-3" />
+											<span>{formatDistance(route.distanceMeters)}</span>
+											<span class="opacity-50">•</span>
+											<span>{formatDuration(route.durationSeconds)}</span>
+										</div>
+									{:else if data.routes.length > 0}
+										<div class="h-8"></div>
+									{/if}
 								</div>
 							</div>
 
@@ -119,7 +159,7 @@
 										</div>
 										<div class="w-0.5 grow bg-muted"></div>
 									</div>
-									<div class="flex-1 pb-8">
+									<div class="flex-1">
 										<a
 											href={getDirectionsUrl(prevPlace, stop.place.displayName)}
 											target="_blank"
@@ -138,6 +178,20 @@
 												/>
 											</div>
 										</a>
+										<!-- Distance between Stops -->
+										{#if data.routes[i + 1]}
+											{@const route = data.routes[i + 1]}
+											{#if route}
+												<div class="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+													<Route class="h-3 w-3" />
+													<span>{formatDistance(route.distanceMeters)}</span>
+													<span class="opacity-50">•</span>
+													<span>{formatDuration(route.durationSeconds)}</span>
+												</div>
+											{/if}
+										{:else if i < data.trip.stops.length - 1}
+											<div class="h-8"></div>
+										{/if}
 									</div>
 								</div>
 							{/each}

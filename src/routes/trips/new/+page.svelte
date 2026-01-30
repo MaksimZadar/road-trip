@@ -19,28 +19,41 @@
 	let description = $state('');
 	let plannedDate = $state<DateValue | undefined>(today(getLocalTimeZone()));
 
-	let origin = $state({ name: '', displayName: '' });
-	let destination = $state({ name: '', displayName: '' });
-	let stops = $state<{ name: string; displayName: string }[]>([]);
+	let origin = $state({ name: '', displayName: '', lat: 0, lon: 0 });
+	let destination = $state({ name: '', displayName: '', lat: 0, lon: 0 });
+	let stops = $state<{ name: string; displayName: string; lat: number; lon: number }[]>([]);
 
 	function addStop() {
-		stops = [...stops, { name: '', displayName: '' }];
+		stops = [...stops, { name: '', displayName: '', lat: 0, lon: 0 }];
 	}
 
 	function removeStop(index: number) {
 		stops = stops.filter((_, i) => i !== index);
 	}
 
-	function setOrigin(place: { name: string; display_name: string }) {
-		origin = { name: place.name, displayName: place.display_name };
+	function setOrigin(place: { name: string; display_name: string; lat: number; lon: number }) {
+		origin = { name: place.name, displayName: place.display_name, lat: place.lat, lon: place.lon };
 	}
 
-	function setDestination(place: { name: string; display_name: string }) {
-		destination = { name: place.name, displayName: place.display_name };
+	function setDestination(place: { name: string; display_name: string; lat: number; lon: number }) {
+		destination = {
+			name: place.name,
+			displayName: place.display_name,
+			lat: place.lat,
+			lon: place.lon
+		};
 	}
 
-	function setStop(index: number, place: { name: string; display_name: string }) {
-		stops[index] = { name: place.name, displayName: place.display_name };
+	function setStop(
+		index: number,
+		place: { name: string; display_name: string; lat: number; lon: number }
+	) {
+		stops[index] = {
+			name: place.name,
+			displayName: place.display_name,
+			lat: place.lat,
+			lon: place.lon
+		};
 	}
 </script>
 
@@ -110,6 +123,8 @@
 						<Label>Starting Point</Label>
 						<input type="hidden" name="originName" value={origin.name} />
 						<input type="hidden" name="originDisplayName" value={origin.displayName} />
+						<input type="hidden" name="originLat" value={origin.lat} />
+						<input type="hidden" name="originLon" value={origin.lon} />
 						<PlaceSearch onSelect={setOrigin} />
 					</div>
 
@@ -129,9 +144,11 @@
 						<div class="space-y-3">
 							{#each stops as stop, i (i)}
 								<div class="flex items-start gap-2">
-									<div class="flex-grow">
+									<div class="grow">
 										<input type="hidden" name="stopName" value={stop.name} />
 										<input type="hidden" name="stopDisplayName" value={stop.displayName} />
+										<input type="hidden" name="stopLat" value={stop.lat} />
+										<input type="hidden" name="stopLon" value={stop.lon} />
 										<PlaceSearch onSelect={(p) => setStop(i, p)} />
 									</div>
 									<Button
@@ -152,6 +169,8 @@
 						<Label>Destination</Label>
 						<input type="hidden" name="destinationName" value={destination.name} />
 						<input type="hidden" name="destinationDisplayName" value={destination.displayName} />
+						<input type="hidden" name="destinationLat" value={destination.lat} />
+						<input type="hidden" name="destinationLon" value={destination.lon} />
 						<PlaceSearch onSelect={setDestination} />
 					</div>
 				</div>

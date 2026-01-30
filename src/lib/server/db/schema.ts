@@ -4,6 +4,7 @@ import {
 	integer,
 	pgTable,
 	primaryKey,
+	doublePrecision,
 	text,
 	timestamp,
 	uuid,
@@ -40,7 +41,9 @@ export const roadTripRelations = relations(roadTrip, ({ one, many }) => ({
 export const places = pgTable('places', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: varchar('name', { length: 500 }).notNull(),
-	displayName: text('display_name').notNull()
+	displayName: text('display_name').notNull(),
+	latitude: doublePrecision('latitude'),
+	longitude: doublePrecision('longitude')
 });
 
 export const placesRelations = relations(places, ({ many }) => ({
