@@ -8,7 +8,8 @@ import {
 	text,
 	timestamp,
 	uuid,
-	varchar
+	varchar,
+	boolean
 } from 'drizzle-orm/pg-core';
 
 export const roadTrip = pgTable('road_trip', {
@@ -35,7 +36,8 @@ export const roadTripRelations = relations(roadTrip, ({ one, many }) => ({
 		references: [places.id],
 		relationName: 'destination'
 	}),
-	stops: many(roadTripStops)
+	stops: many(roadTripStops),
+	checklist: many(checklistItem)
 }));
 
 export const places = pgTable('places', {
@@ -106,5 +108,21 @@ export const routeCacheRelations = relations(routeCache, ({ one }) => ({
 		fields: [routeCache.toPlaceId],
 		references: [places.id],
 		relationName: 'routes_to'
+	})
+}));
+
+export const checklistItem = pgTable('check_list_item', {
+	id: uuid().primaryKey().defaultRandom(),
+	roadTripId: uuid('road_trip_id').references(() => roadTrip.id),
+	item: varchar({ length: 256 }).notNull(),
+	count: integer().default(1),
+	checked: boolean().default(false)
+});
+
+export const checklistItemRelations = relations(checklistItem, ({ one }) => ({
+	roadTrip: one(roadTrip, {
+		fields: [checklistItem.roadTripId],
+		references: [roadTrip.id],
+		relationName: 'road_trip'
 	})
 }));
