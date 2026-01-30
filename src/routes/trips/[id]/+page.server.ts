@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { error, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-import { OPENROUTE_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -102,7 +102,7 @@ export const actions: Actions = {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
-							Authorization: OPENROUTE_API_KEY
+							Authorization: env.OPENROUTE_API_KEY
 						},
 						body: JSON.stringify({
 							coordinates: [

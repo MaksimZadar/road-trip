@@ -10,5 +10,18 @@ services:
       POSTGRES_DB: local
     volumes:
       - pgdata:/var/lib/postgresql
+
+  app:
+    build: .
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://root:mysecretpassword@db:5432/local
+      OPENROUTE_API_KEY: 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA0MmIxNDI1NjcxNzRhNmE4NzNmMjJiODk2YTQxNTM5IiwiaCI6Im11cm11cjY0In0=' # User to fill
+      ORIGIN: http://localhost:3000
+    depends_on:
+      - db
+
 volumes:
   pgdata:
