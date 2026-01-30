@@ -16,6 +16,9 @@ export const load: PageServerLoad = async ({ params }) => {
 					place: true
 				},
 				orderBy: (stops, { asc }) => [asc(stops.order)]
+			},
+			checklist: {
+				orderBy: (items, { asc }) => [asc(items.createdAt)]
 			}
 		}
 	});
@@ -136,5 +139,48 @@ export const actions: Actions = {
 		await db.delete(schema.roadTrip).where(eq(schema.roadTrip.id, id));
 
 		throw redirect(303, '/trips');
+	},
+	addChecklistItem: async ({ params, request }) => {
+		const tripId = params.id;
+		const formData = await request.formData();
+		const item = formData.get('item') as string;
+		const count = parseInt(formData.get('count') as string) || 1;
+
+		if (!item) return { success: false };
+
+		await db.insert(schema.checklistItem).values({
+			roadTripId: tripId,
+			item,
+			count,
+			checked: false
+		});
+
+		return { success: true };
+	},
+	toggleChecklistItem: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const checked = formData.get('checked') === 'true';
+
+		await db.update(schema.checklistItem).set({ checked }).where(eq(schema.checklistItem.id, id));
+
+		return { success: true };
+	},
+	updateChecklistItemCount: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const count = parseInt(formData.get('count') as string) || 1;
+
+		await db.update(schema.checklistItem).set({ count }).where(eq(schema.checklistItem.id, id));
+
+		return { success: true };
+	},
+	deleteChecklistItem: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		await db.delete(schema.checklistItem).where(eq(schema.checklistItem.id, id));
+
+		return { success: true };
 	}
 };

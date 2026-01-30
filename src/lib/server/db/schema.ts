@@ -116,7 +116,8 @@ export const checklistItem = pgTable('check_list_item', {
 	roadTripId: uuid('road_trip_id').references(() => roadTrip.id),
 	item: varchar({ length: 256 }).notNull(),
 	count: integer().default(1),
-	checked: boolean().default(false)
+	checked: boolean().default(false),
+	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
 export const checklistItemRelations = relations(checklistItem, ({ one }) => ({

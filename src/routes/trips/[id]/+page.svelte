@@ -12,8 +12,11 @@
 		ChevronDown,
 		ChevronUp,
 		Trash2,
-		Route
+		Route,
+		Plus
 	} from '@lucide/svelte';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
 
@@ -237,6 +240,97 @@
 					</Card.Content>
 				</div>
 			{/if}
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<div class="flex items-center justify-between">
+					<div class="space-y-1.5">
+						<Card.Title>Road Trip Checklist</Card.Title>
+						<Card.Description>Don't forget the essentials for your journey.</Card.Description>
+					</div>
+				</div>
+			</Card.Header>
+			<Card.Content>
+				<div class="space-y-4">
+					<form
+						action="?/addChecklistItem"
+						method="POST"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+							};
+						}}
+						class="flex gap-2"
+					>
+						<Input name="item" placeholder="Add new item..." required />
+						<Input name="count" type="number" placeholder="Qty" class="w-20" min="1" value="1" />
+						<Button type="submit" size="icon" variant="outline">
+							<Plus class="h-4 w-4" />
+						</Button>
+					</form>
+
+					<div class="space-y-2">
+						{#each data.trip.checklist as item (item.id)}
+							<div class="flex items-center justify-between rounded-lg border p-3">
+								<div class="flex flex-1 items-center gap-3">
+									<form action="?/toggleChecklistItem" method="POST" use:enhance>
+										<input type="hidden" name="id" value={item.id} />
+										<input type="hidden" name="checked" value={!item.checked} />
+										<Checkbox
+											checked={item.checked ?? false}
+											onCheckedChange={() => {
+												const form = document
+													.querySelector(
+														`form[action="?/toggleChecklistItem"] input[name="id"][value="${item.id}"]`
+													)
+													?.closest('form');
+												if (form) form.requestSubmit();
+											}}
+										/>
+									</form>
+									<span class={item.checked ? 'text-muted-foreground line-through' : ''}>
+										{item.item}
+									</span>
+								</div>
+
+								<div class="flex items-center gap-2">
+									<form action="?/updateChecklistItemCount" method="POST" use:enhance>
+										<input type="hidden" name="id" value={item.id} />
+										<Input
+											name="count"
+											type="number"
+											value={item.count}
+											min="1"
+											disabled={item.checked}
+											class="h-8 w-16 text-center"
+											onchange={(e) => {
+												e.currentTarget.closest('form')?.requestSubmit();
+											}}
+										/>
+									</form>
+
+									<form action="?/deleteChecklistItem" method="POST" use:enhance>
+										<input type="hidden" name="id" value={item.id} />
+										<Button
+											type="submit"
+											variant="ghost"
+											size="icon"
+											class="text-muted-foreground hover:text-destructive"
+										>
+											<Trash2 class="h-4 w-4" />
+										</Button>
+									</form>
+								</div>
+							</div>
+						{:else}
+							<p class="py-4 text-center text-sm text-muted-foreground">
+								No items in your checklist.
+							</p>
+						{/each}
+					</div>
+				</div>
+			</Card.Content>
 		</Card.Root>
 	</div>
 </div>
