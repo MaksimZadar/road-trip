@@ -40,6 +40,16 @@ export const roadTripRelations = relations(roadTrip, ({ one, many }) => ({
 	checklist: many(checklistItem)
 }));
 
+export const category = pgTable('category', {
+	id: uuid().primaryKey().defaultRandom(),
+	name: varchar({ length: 128 }).notNull().unique(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
+export const categoryRelations = relations(category, ({ many }) => ({
+	items: many(checklistItem)
+}));
+
 export const places = pgTable('places', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: varchar('name', { length: 500 }).notNull(),
@@ -114,6 +124,7 @@ export const routeCacheRelations = relations(routeCache, ({ one }) => ({
 export const checklistItem = pgTable('check_list_item', {
 	id: uuid().primaryKey().defaultRandom(),
 	roadTripId: uuid('road_trip_id').references(() => roadTrip.id),
+	categoryId: uuid('category_id').references(() => category.id),
 	item: varchar({ length: 256 }).notNull(),
 	count: integer().default(1),
 	checked: boolean().default(false),
@@ -125,5 +136,9 @@ export const checklistItemRelations = relations(checklistItem, ({ one }) => ({
 		fields: [checklistItem.roadTripId],
 		references: [roadTrip.id],
 		relationName: 'road_trip'
+	}),
+	category: one(category, {
+		fields: [checklistItem.categoryId],
+		references: [category.id]
 	})
 }));

@@ -13,17 +13,64 @@
 		ChevronUp,
 		Trash2,
 		Route,
-		Plus
+		Plus,
+		Check
 	} from '@lucide/svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	let { data } = $props();
-
 	let isTimelineCollapsed = $state(false);
 	let isChecklistCollapsed = $state(false);
+	let showNewCategoryInput = $state(false);
+	let selectedCategoryId = $state('');
+
+	const itemsByCategory = $derived.by(() => {
+		const items = data.trip.checklist;
+		const categories = data.categories;
+
+		const grouped = new SvelteMap<string | null, typeof items>();
+
+		items.forEach((item) => {
+			const catId = item.categoryId || null;
+			if (!grouped.has(catId)) {
+				grouped.set(catId, []);
+			}
+			grouped.get(catId)!.push(item);
+		});
+
+		const result: { id: string; name: string; items: typeof items; allChecked: boolean }[] = [];
+
+		// First, add categorized items in order of categories
+		categories.forEach((cat) => {
+			const catItems = grouped.get(cat.id);
+			if (catItems && catItems.length > 0) {
+				result.push({
+					id: cat.id,
+					name: cat.name,
+					items: catItems,
+					allChecked: catItems.every((item) => item.checked)
+				});
+			}
+		});
+
+		// Then, add uncategorized items
+		const uncategorizedItems = grouped.get(null);
+		if (uncategorizedItems && uncategorizedItems.length > 0) {
+			result.push({
+				id: 'none',
+				name: 'Uncategorized',
+				items: uncategorizedItems,
+				allChecked: uncategorizedItems.every((item) => item.checked)
+			});
+		}
+
+		return result;
+	});
 
 	const df = new DateFormatter('en-US', {
 		dateStyle: 'full'
@@ -276,75 +323,184 @@
 								use:enhance={() => {
 									return async ({ update }) => {
 										await update();
+										showNewCategoryInput = false;
+										selectedCategoryId = '';
 									};
 								}}
-								class="flex gap-2"
+								class="space-y-2"
 							>
-								<Input name="item" placeholder="Add new item..." required />
-								<Input
-									name="count"
-									type="number"
-									placeholder="Qty"
-									class="w-20"
-									min="1"
-									value="1"
-								/>
-								<Button type="submit" size="icon" variant="outline">
-									<Plus class="h-4 w-4" />
-								</Button>
+								<div class="flex gap-2">
+									<Input name="item" placeholder="Add new item..." required />
+									{#if showNewCategoryInput}
+										<Input name="newCategory" placeholder="New category name..." required />
+										<Button
+											type="button"
+											size="icon"
+											variant="outline"
+											onclick={() => {
+												showNewCategoryInput = false;
+												selectedCategoryId = '';
+											}}
+										>
+											<ChevronLeft class="h-4 w-4" />
+										</Button>
+									{:else}
+										<Select.Root
+											type="single"
+											bind:value={selectedCategoryId}
+											onValueChange={(v) => {
+												showNewCategoryInput = v === 'new';
+											}}
+										>
+											<Select.Trigger class="w-50">
+												{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
+													(selectedCategoryId === 'new' ? 'Add New Category...' : 'No Category')}
+											</Select.Trigger>
+											<Select.Content>
+												<Select.Item value="">No Category</Select.Item>
+												{#each data.categories as cat (cat.id)}
+													<Select.Item value={cat.id}>{cat.name}</Select.Item>
+												{/each}
+												<Select.Separator />
+												<Select.Item value="new">+ Add New Category...</Select.Item>
+											</Select.Content>
+											<input
+												type="hidden"
+												name="categoryId"
+												value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+											/>
+										</Select.Root>
+									{/if}
+									<Input
+										name="count"
+										type="number"
+										placeholder="Qty"
+										class="max-w-20 min-w-20"
+										min="1"
+										value="1"
+									/>
+									<Button type="submit" size="icon" variant="outline">
+										<Plus class="h-4 w-4" />
+									</Button>
+								</div>
 							</form>
 
-							<div class="space-y-2">
-								{#each data.trip.checklist as item (item.id)}
-									<div class="flex items-center justify-between rounded-lg border p-3">
-										<div class="flex flex-1 items-center gap-3">
-											<form action="?/toggleChecklistItem" method="POST" use:enhance>
-												<input type="hidden" name="id" value={item.id} />
-												<input type="hidden" name="checked" value={!item.checked} />
-												<Checkbox
-													checked={item.checked ?? false}
-													onCheckedChange={() => {
-														const form = document
-															.querySelector(
-																`form[action="?/toggleChecklistItem"] input[name="id"][value="${item.id}"]`
-															)
-															?.closest('form');
-														if (form) form.requestSubmit();
-													}}
-												/>
-											</form>
-											<span class={item.checked ? 'text-muted-foreground line-through' : ''}>
-												{item.item}
-											</span>
+							<div class="space-y-6">
+								{#each itemsByCategory as group (group.id)}
+									<div class="space-y-3">
+										<div class="flex items-center gap-2 px-1">
+											<h4 class="text-sm font-semibold text-muted-foreground">{group.name}</h4>
+											{#if group.allChecked}
+												<Check class="h-4 w-4 text-primary" />
+											{/if}
 										</div>
+										<div class="space-y-2">
+											{#each group.items as item (item.id)}
+												<div class="flex flex-col rounded-lg border p-3">
+													<div class="flex items-center justify-between gap-2">
+														<div class="flex flex-1 items-center gap-3">
+															<form action="?/toggleChecklistItem" method="POST" use:enhance>
+																<input type="hidden" name="id" value={item.id} />
+																<input type="hidden" name="checked" value={!item.checked} />
+																<Checkbox
+																	checked={item.checked ?? false}
+																	onCheckedChange={() => {
+																		const form = document
+																			.querySelector(
+																				`form[action="?/toggleChecklistItem"] input[name="id"][value="${item.id}"]`
+																			)
+																			?.closest('form');
+																		if (form) form.requestSubmit();
+																	}}
+																/>
+															</form>
+															<span
+																class={item.checked ? 'text-muted-foreground line-through' : ''}
+															>
+																{item.item}
+															</span>
+														</div>
 
-										<div class="flex items-center gap-2">
-											<form action="?/updateChecklistItemCount" method="POST" use:enhance>
-												<input type="hidden" name="id" value={item.id} />
-												<Input
-													name="count"
-													type="number"
-													value={item.count}
-													min="1"
-													disabled={item.checked}
-													class="h-8 w-16 text-center"
-													onchange={(e) => {
-														e.currentTarget.closest('form')?.requestSubmit();
-													}}
-												/>
-											</form>
+														<div class="flex items-center gap-2">
+															<form
+																action="?/updateChecklistItemCategory"
+																method="POST"
+																use:enhance
+															>
+																<input type="hidden" name="id" value={item.id} />
+																<Select.Root
+																	type="single"
+																	disabled={item.checked ?? false}
+																	value={item.categoryId ?? ''}
+																	onValueChange={(v) => {
+																		const form = document
+																			.querySelector(
+																				`form[action="?/updateChecklistItemCategory"] input[name="id"][value="${item.id}"]`
+																			)
+																			?.closest('form');
+																		if (form) {
+																			// Create a temporary hidden input for the categoryId since Select doesn't use a real select
+																			let input = form.querySelector(
+																				'input[name="categoryId"]'
+																			) as HTMLInputElement;
+																			if (!input) {
+																				input = document.createElement('input');
+																				input.type = 'hidden';
+																				input.name = 'categoryId';
+																				form.appendChild(input);
+																			}
+																			input.value = v;
+																			form.requestSubmit();
+																		}
+																	}}
+																>
+																	<Select.Trigger
+																		class="h-7 px-2 py-0 text-xs text-muted-foreground"
+																	>
+																		{data.categories.find((c) => c.id === item.categoryId)?.name ??
+																			'No Category'}
+																	</Select.Trigger>
+																	<Select.Content>
+																		<Select.Item value="">No Category</Select.Item>
+																		{#each data.categories as cat (cat.id)}
+																			<Select.Item value={cat.id}>{cat.name}</Select.Item>
+																		{/each}
+																	</Select.Content>
+																</Select.Root>
+															</form>
+														</div>
 
-											<form action="?/deleteChecklistItem" method="POST" use:enhance>
-												<input type="hidden" name="id" value={item.id} />
-												<Button
-													type="submit"
-													variant="ghost"
-													size="icon"
-													class="text-muted-foreground hover:text-destructive"
-												>
-													<Trash2 class="h-4 w-4" />
-												</Button>
-											</form>
+														<div class="flex items-center gap-2">
+															<form action="?/updateChecklistItemCount" method="POST" use:enhance>
+																<input type="hidden" name="id" value={item.id} />
+																<Input
+																	name="count"
+																	type="number"
+																	value={item.count}
+																	min="1"
+																	disabled={item.checked}
+																	class="h-8 w-16 text-center"
+																	onchange={(e) => {
+																		e.currentTarget.closest('form')?.requestSubmit();
+																	}}
+																/>
+															</form>
+
+															<form action="?/deleteChecklistItem" method="POST" use:enhance>
+																<input type="hidden" name="id" value={item.id} />
+																<Button
+																	type="submit"
+																	variant="ghost"
+																	size="icon"
+																	class="text-muted-foreground hover:text-destructive"
+																>
+																	<Trash2 class="h-4 w-4" />
+																</Button>
+															</form>
+														</div>
+													</div>
+												</div>
+											{/each}
 										</div>
 									</div>
 								{:else}

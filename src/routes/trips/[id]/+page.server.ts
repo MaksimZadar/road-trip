@@ -18,10 +18,15 @@ export const load: PageServerLoad = async ({ params }) => {
 				orderBy: (stops, { asc }) => [asc(stops.order)]
 			},
 			checklist: {
+				with: {
+					category: true
+				},
 				orderBy: (items, { asc }) => [asc(items.createdAt)]
 			}
 		}
 	});
+
+	const categories = await db.query.category.findMany();
 
 	if (!trip) {
 		throw error(404, 'Road trip not found');
@@ -47,6 +52,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	return {
 		trip,
 		routes,
+		categories,
 		hasMissingDistances
 	};
 };
@@ -145,15 +151,46 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const item = formData.get('item') as string;
 		const count = parseInt(formData.get('count') as string) || 1;
+		const categoryId = formData.get('categoryId') as string;
+		const newCategory = formData.get('newCategory') as string;
 
 		if (!item) return { success: false };
+
+		let finalCategoryId = categoryId || null;
+
+		if (newCategory) {
+			const [category] = await db
+				.insert(schema.category)
+				.values({
+					name: newCategory
+				})
+				.onConflictDoUpdate({
+					target: schema.category.name,
+					set: { name: newCategory }
+				})
+				.returning();
+			finalCategoryId = category.id;
+		}
 
 		await db.insert(schema.checklistItem).values({
 			roadTripId: tripId,
 			item,
 			count,
+			categoryId: finalCategoryId,
 			checked: false
 		});
+
+		return { success: true };
+	},
+	updateChecklistItemCategory: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const categoryId = formData.get('categoryId') as string;
+
+		await db
+			.update(schema.checklistItem)
+			.set({ categoryId: categoryId || null })
+			.where(eq(schema.checklistItem.id, id));
 
 		return { success: true };
 	},
