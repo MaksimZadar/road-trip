@@ -36,10 +36,13 @@ RUN pnpm install --prod
 
 # Copy the built application from the builder stage
 COPY --from=builder /app/build ./build
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/src/lib/server/db/migrate.js ./scripts/migrate.js
 
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV MIGRATIONS_PATH=/app/drizzle
 
 # Expose the port
 EXPOSE 3000
