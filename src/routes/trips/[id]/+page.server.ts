@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { getWeatherForTrip } from '$lib/server/services/weather';
+import { getWeatherForTrip, deleteCachedWeatherForTrip } from '$lib/server/services/weather';
+import { isWeatherForecastAvailable } from '$lib/utils/weather';
 import { error, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
@@ -60,12 +61,16 @@ export const load: PageServerLoad = async ({ params }) => {
 		weatherData[placeId] = weather;
 	});
 
+	// Check if weather refresh is available (trip date is within forecast window)
+	const isWeatherRefreshAvailable = isWeatherForecastAvailable(trip.plannedDate);
+
 	return {
 		trip,
 		routes,
 		categories,
 		hasMissingDistances,
-		weatherData
+		weatherData,
+		isWeatherRefreshAvailable
 	};
 };
 
@@ -147,6 +152,33 @@ export const actions: Actions = {
 				console.error('OpenRouteService error:', e);
 			}
 		}
+
+		return { success: true };
+	},
+	refreshWeather: async ({ params }) => {
+		const trip = await db.query.roadTrip.findFirst({
+			where: (roadTrip, { eq }) => eq(roadTrip.id, params.id),
+			with: {
+				origin: true,
+				destination: true,
+				stops: {
+					with: {
+						place: true
+					}
+				}
+			}
+		});
+
+		if (!trip) throw error(404, 'Trip not found');
+
+		// Check if forecast is available for this date
+		if (!isWeatherForecastAvailable(trip.plannedDate)) {
+			return { success: false, error: 'Trip date is outside the forecast window' };
+		}
+
+		// Delete cached weather for all places
+		const places = [trip.origin, ...trip.stops.map((s) => s.place), trip.destination];
+		await deleteCachedWeatherForTrip(trip.plannedDate, places);
 
 		return { success: true };
 	},
