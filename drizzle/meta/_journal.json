@@ -15,6 +15,13 @@
       "when": 1769778311333,
       "tag": "0001_mushy_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769869729008,
+      "tag": "0002_fancy_stryfe",
+      "breakpoints": true
     }
   ]
 }
