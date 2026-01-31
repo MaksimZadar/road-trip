@@ -11,6 +11,11 @@ It's gitignored to keep project context separate from the main codebase.
 Future additions should create a new `.openclaw/` folder in each project root
 and add it to that project's `.gitignore`.
 
+## Git Commit Conventions
+All commits must follow **Conventional Commits** format:
+- Format: `type(scope): description`
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+
 ## Current Development
 Branch: social-login
 Status: Setting up foundation for authentication features
