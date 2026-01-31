@@ -2,6 +2,18 @@
 
 You have access to the Svelte MCP server for comprehensive Svelte 5 and SvelteKit documentation.
 
+## Project Conventions
+
+### Git Commit Style
+Use **Conventional Commits** format:
+- `feat:` new features
+- `fix:` bug fixes  
+- `docs:` documentation changes
+- `style:` code formatting, no logic changes
+- `refactor:` code reorganization
+- `test:` adding or updating tests
+- `chore:` maintenance tasks, build updates
+
 ## Svelte MCP Tools
 
 ### 1. Discovery & Documentation
