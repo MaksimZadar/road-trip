@@ -52,8 +52,9 @@ export function formatTemperature(temp: number | null): string {
 	return `${Math.round(temp)}°C`;
 }
 
+export const MAX_FORECAST_DAYS = 14; // Open-Meteo provides ~14 days of forecast
+
 export function isWeatherForecastAvailable(date: Date): boolean {
-	const MAX_FORECAST_DAYS = 14; // Open-Meteo provides ~14 days of forecast
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 	const targetDate = new Date(date);

@@ -174,3 +174,19 @@ export async function getWeatherForTrip(
 
 	return weatherMap;
 }
+
+export async function deleteCachedWeatherForTrip(
+	tripDate: Date,
+	places: Array<{ id: string }>
+): Promise<void> {
+	// Create a date object at midnight for comparison
+	const dateObj = new Date(tripDate);
+	dateObj.setHours(0, 0, 0, 0);
+
+	// Delete cache entries for all places on this date
+	for (const place of places) {
+		await db
+			.delete(schema.weatherCache)
+			.where(and(eq(schema.weatherCache.placeId, place.id), eq(schema.weatherCache.date, dateObj)));
+	}
+}

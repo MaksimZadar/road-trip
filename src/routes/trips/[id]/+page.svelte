@@ -14,7 +14,8 @@
 		Trash2,
 		Route,
 		Plus,
-		Check
+		Check,
+		CloudSun
 	} from '@lucide/svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -113,6 +114,14 @@
 					</Button>
 				</form>
 			{/if}
+			{#if data.isWeatherRefreshAvailable}
+				<form action="?/refreshWeather" method="POST" use:enhance>
+					<Button type="submit" variant="outline" size="sm">
+						<CloudSun class="mr-2 h-4 w-4" />
+						Refresh Weather
+					</Button>
+				</form>
+			{/if}
 			<form action="?/delete" method="POST" use:enhance>
 				<Button
 					type="submit"
@@ -184,12 +193,14 @@
 									>
 										<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
 										<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
-										<div class="mt-2">
-											<WeatherCard
-												weather={data.weatherData[data.trip.origin.id] || null}
-												tripDate={new Date(data.trip.plannedDate)}
-											/>
-										</div>
+										{#if data.weatherData[data.trip.origin.id]}
+											<div class="mt-2">
+												<WeatherCard
+													weather={data.weatherData[data.trip.origin.id]}
+													tripDate={new Date(data.trip.plannedDate)}
+												/>
+											</div>
+										{/if}
 									</div>
 									<!-- Distance between Origin and First Stop/Destination -->
 									{#if data.routes[0]}
@@ -235,12 +246,14 @@
 													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 												/>
 											</div>
-											<div class="mt-1">
-												<WeatherCard
-													weather={data.weatherData[stop.place.id] || null}
-													tripDate={new Date(data.trip.plannedDate)}
-												/>
-											</div>
+											{#if data.weatherData[stop.place.id]}
+												<div class="mt-1">
+													<WeatherCard
+														weather={data.weatherData[stop.place.id]}
+														tripDate={new Date(data.trip.plannedDate)}
+													/>
+												</div>
+											{/if}
 										</a>
 										<!-- Distance between Stops -->
 										{#if data.routes[i + 1]}
@@ -293,12 +306,14 @@
 													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 												/>
 											</div>
-											<div class="mt-1">
-												<WeatherCard
-													weather={data.weatherData[data.trip.destination.id] || null}
-													tripDate={new Date(data.trip.plannedDate)}
-												/>
-											</div>
+											{#if data.weatherData[data.trip.destination.id]}
+												<div class="mt-1">
+													<WeatherCard
+														weather={data.weatherData[data.trip.destination.id]}
+														tripDate={new Date(data.trip.plannedDate)}
+													/>
+												</div>
+											{/if}
 										</a>
 									</div>
 								</div>
