@@ -142,3 +142,26 @@ export const checklistItemRelations = relations(checklistItem, ({ one }) => ({
 		references: [category.id]
 	})
 }));
+
+export const weatherCache = pgTable(
+	'weather_cache',
+	{
+		placeId: uuid('place_id')
+			.notNull()
+			.references(() => places.id),
+		date: date('date', { mode: 'date' }).notNull(),
+		tempMax: doublePrecision('temp_max'),
+		tempMin: doublePrecision('temp_min'),
+		weatherCode: integer('weather_code'),
+		precipitation: doublePrecision('precipitation'),
+		updatedAt: timestamp('updated_at').defaultNow().notNull()
+	},
+	(t) => [primaryKey({ columns: [t.placeId, t.date] })]
+);
+
+export const weatherCacheRelations = relations(weatherCache, ({ one }) => ({
+	place: one(places, {
+		fields: [weatherCache.placeId],
+		references: [places.id]
+	})
+}));

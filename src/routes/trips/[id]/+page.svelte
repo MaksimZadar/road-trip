@@ -22,6 +22,7 @@
 	import { DateFormatter } from '@internationalized/date';
 	import { slide } from 'svelte/transition';
 	import { SvelteMap } from 'svelte/reactivity';
+	import WeatherCard from '$lib/components/WeatherCard.svelte';
 
 	let { data } = $props();
 	let isTimelineCollapsed = $state(false);
@@ -183,6 +184,12 @@
 									>
 										<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
 										<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
+										<div class="mt-2">
+											<WeatherCard
+												weather={data.weatherData[data.trip.origin.id] || null}
+												tripDate={new Date(data.trip.plannedDate)}
+											/>
+										</div>
 									</div>
 									<!-- Distance between Origin and First Stop/Destination -->
 									{#if data.routes[0]}
@@ -226,6 +233,12 @@
 												</div>
 												<MapPin
 													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+												/>
+											</div>
+											<div class="mt-1">
+												<WeatherCard
+													weather={data.weatherData[stop.place.id] || null}
+													tripDate={new Date(data.trip.plannedDate)}
 												/>
 											</div>
 										</a>
@@ -278,6 +291,12 @@
 												</div>
 												<MapPin
 													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+												/>
+											</div>
+											<div class="mt-1">
+												<WeatherCard
+													weather={data.weatherData[data.trip.destination.id] || null}
+													tripDate={new Date(data.trip.plannedDate)}
 												/>
 											</div>
 										</a>

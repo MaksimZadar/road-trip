@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
+import { getWeatherForTrip } from '$lib/server/services/weather';
 import { error, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
@@ -49,11 +50,22 @@ export const load: PageServerLoad = async ({ params }) => {
 		routes.push(route || null);
 	}
 
+	// Fetch weather data for all places on the trip date
+	const places = [trip.origin, ...trip.stops.map((s) => s.place), trip.destination];
+	const weatherMap = await getWeatherForTrip(trip.plannedDate, places);
+
+	// Convert Map to a plain object for serialization
+	const weatherData: Record<string, import('$lib/utils/weather').WeatherData> = {};
+	weatherMap.forEach((weather, placeId) => {
+		weatherData[placeId] = weather;
+	});
+
 	return {
 		trip,
 		routes,
 		categories,
-		hasMissingDistances
+		hasMissingDistances,
+		weatherData
 	};
 };
 
