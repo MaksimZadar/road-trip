@@ -1,7 +1,7 @@
 # Auth.js Integration Todo List
 
 ## Phase 1: Foundation Setup
-- [ ] Install @auth/sveltekit packages
+- [x] Install @auth/sveltekit packages
 - [ ] Generate AUTH_SECRET and add to .env.local
 - [ ] Create Google OAuth app and get credentials
 - [ ] Create GitHub OAuth app and get credentials
