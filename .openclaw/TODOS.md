@@ -1,13 +1,11 @@
 # Auth.js Integration Todo List
 
 ## Phase 1: Foundation Setup
-- [x] Install @auth/sveltekit packages
-- [x] Generate AUTH_SECRET and add to .env.local
-- [x] Create Google OAuth app and get credentials
-- [x] Create GitHub OAuth app and get credentials
-- [x] Set up Auth.js configuration in src/auth.ts
-- [x] Create auth hooks in src/hooks.server.ts
-- [x] Add auth environment variables to .env.example
+- [x] Install cool UI components (charts, maps)
+- [x] Set up database schema for trips
+- [x] Create responsive layout
+- [ ] Add family sharing (via links)
+- [ ] Implement trip collaboration features
 
 ## Phase 2: Database & Models
 - [ ] Create user authentication tables in database schema
