@@ -64,13 +64,33 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Check if weather refresh is available (trip date is within forecast window)
 	const isWeatherRefreshAvailable = isWeatherForecastAvailable(trip.plannedDate);
 
+	// Calculate trip stats
+	let totalDistanceMeters = 0;
+	let totalDurationSeconds = 0;
+	let calculatedRouteCount = 0;
+
+	for (const route of routes) {
+		if (route && route.distanceMeters !== null && route.durationSeconds !== null) {
+			totalDistanceMeters += route.distanceMeters;
+			totalDurationSeconds += route.durationSeconds;
+			calculatedRouteCount++;
+		}
+	}
+
+	const tripStats = {
+		totalDistanceMeters: calculatedRouteCount > 0 ? totalDistanceMeters : null,
+		totalDurationSeconds: calculatedRouteCount > 0 ? totalDurationSeconds : null,
+		totalStops: sequence.length
+	};
+
 	return {
 		trip,
 		routes,
 		categories,
 		hasMissingDistances,
 		weatherData,
-		isWeatherRefreshAvailable
+		isWeatherRefreshAvailable,
+		tripStats
 	};
 };
 

@@ -15,7 +15,9 @@
 		Route,
 		Plus,
 		Check,
-		CloudSun
+		CloudSun,
+		Clock,
+		Gauge
 	} from '@lucide/svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -149,6 +151,33 @@
 				</p>
 			{/if}
 		</header>
+
+		<!-- Trip Stats -->
+		{#if data.tripStats.totalDistanceMeters !== null}
+			<div class="flex flex-wrap gap-4 rounded-lg border bg-card p-4 text-card-foreground">
+				<div class="flex items-center gap-2">
+					<Route class="h-5 w-5 text-primary" />
+					<div>
+						<p class="text-xs text-muted-foreground">Total Distance</p>
+						<p class="font-semibold">{formatDistance(data.tripStats.totalDistanceMeters)}</p>
+					</div>
+				</div>
+				<div class="flex items-center gap-2">
+					<Clock class="h-5 w-5 text-primary" />
+					<div>
+						<p class="text-xs text-muted-foreground">Est. Duration</p>
+						<p class="font-semibold">{formatDuration(data.tripStats.totalDurationSeconds)}</p>
+					</div>
+				</div>
+				<div class="flex items-center gap-2">
+					<MapPin class="h-5 w-5 text-primary" />
+					<div>
+						<p class="text-xs text-muted-foreground">Total Stops</p>
+						<p class="font-semibold">{data.tripStats.totalStops}</p>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<Card.Root>
 			<Card.Header>
