@@ -27,9 +27,9 @@ You have access to the Svelte MCP server for comprehensive Svelte 5 and SvelteKi
 
 ### Context Recovery
 
-At the start of each session:
+**At the start of each session:**
 
-1. Check if `.context/SESSION_SUMMARY.md` exists
+1. **ALWAYS** Check if `.context/SESSION_SUMMARY.md` exists
 2. If it does, read it first to understand current state
 3. If it doesn't, treat as fresh session
 
