@@ -11,7 +11,9 @@
 
 <ModeWatcher />
 
-{@render children()}
+<div class="px-4 sm:px-6 lg:px-8">
+	{@render children()}
+</div>
 
 <div class="fixed bottom-4 left-4 z-50">
 	<ModeToggle />

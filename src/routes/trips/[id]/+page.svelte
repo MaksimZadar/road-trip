@@ -392,59 +392,66 @@
 								}}
 								class="space-y-2"
 							>
-								<div class="flex gap-2">
-									<Input name="item" placeholder="Add new item..." required />
-									{#if showNewCategoryInput}
-										<Input name="newCategory" placeholder="New category name..." required />
-										<Button
-											type="button"
-											size="icon"
-											variant="outline"
-											onclick={() => {
-												showNewCategoryInput = false;
-												selectedCategoryId = '';
-											}}
-										>
-											<ChevronLeft class="h-4 w-4" />
-										</Button>
-									{:else}
-										<Select.Root
-											type="single"
-											bind:value={selectedCategoryId}
-											onValueChange={(v) => {
-												showNewCategoryInput = v === 'new';
-											}}
-										>
-											<Select.Trigger class="w-50">
-												{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
-													(selectedCategoryId === 'new' ? 'Add New Category...' : 'No Category')}
-											</Select.Trigger>
-											<Select.Content>
-												<Select.Item value="">No Category</Select.Item>
-												{#each data.categories as cat (cat.id)}
-													<Select.Item value={cat.id}>{cat.name}</Select.Item>
-												{/each}
-												<Select.Separator />
-												<Select.Item value="new">+ Add New Category...</Select.Item>
-											</Select.Content>
-											<input
-												type="hidden"
-												name="categoryId"
-												value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+								<div class="flex flex-col gap-2 sm:flex-row">
+									<Input name="item" placeholder="Add new item..." required class="sm:flex-1" />
+									<div class="flex gap-2">
+										{#if showNewCategoryInput}
+											<Input
+												name="newCategory"
+												placeholder="New category name..."
+												required
+												class="flex-1"
 											/>
-										</Select.Root>
-									{/if}
-									<Input
-										name="count"
-										type="number"
-										placeholder="Qty"
-										class="max-w-20 min-w-20"
-										min="1"
-										value="1"
-									/>
-									<Button type="submit" size="icon" variant="outline">
-										<Plus class="h-4 w-4" />
-									</Button>
+											<Button
+												type="button"
+												size="icon"
+												variant="outline"
+												onclick={() => {
+													showNewCategoryInput = false;
+													selectedCategoryId = '';
+												}}
+											>
+												<ChevronLeft class="h-4 w-4" />
+											</Button>
+										{:else}
+											<Select.Root
+												type="single"
+												bind:value={selectedCategoryId}
+												onValueChange={(v) => {
+													showNewCategoryInput = v === 'new';
+												}}
+											>
+												<Select.Trigger class="w-50">
+													{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
+														(selectedCategoryId === 'new' ? 'Add New Category...' : 'No Category')}
+												</Select.Trigger>
+												<Select.Content>
+													<Select.Item value="">No Category</Select.Item>
+													{#each data.categories as cat (cat.id)}
+														<Select.Item value={cat.id}>{cat.name}</Select.Item>
+													{/each}
+													<Select.Separator />
+													<Select.Item value="new">+ Add New Category...</Select.Item>
+												</Select.Content>
+												<input
+													type="hidden"
+													name="categoryId"
+													value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+												/>
+											</Select.Root>
+										{/if}
+										<Input
+											name="count"
+											type="number"
+											placeholder="Qty"
+											class="max-w-20 min-w-20"
+											min="1"
+											value="1"
+										/>
+										<Button type="submit" size="icon" variant="outline">
+											<Plus class="h-4 w-4" />
+										</Button>
+									</div>
 								</div>
 							</form>
 
