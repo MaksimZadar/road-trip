@@ -27,6 +27,7 @@
 		"@sveltejs/kit": "^2.50.1",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.1.18",
+		"@types/leaflet": "^1.9.21",
 		"@types/node": "^24",
 		"bits-ui": "^2.15.4",
 		"clsx": "^2.1.1",
@@ -49,8 +50,10 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
+		"@mapbox/polyline": "^1.2.1",
 		"axios": "^1.13.4",
 		"drizzle-orm": "^0.45.1",
+		"leaflet": "^1.9.4",
 		"mode-watcher": "^1.1.0",
 		"postgres": "^3.4.8"
 	}
