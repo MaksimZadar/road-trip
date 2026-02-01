@@ -1,3 +1,15 @@
+# [0.4.0](https://github.com/MaksimZadar/road-trip/compare/v0.3.0...v0.4.0) (2026-02-01)
+
+
+### Bug Fixes
+
+* **map:** remove duplicate route timeline ([63bee60](https://github.com/MaksimZadar/road-trip/commit/63bee60c3135ae0837238964b896797518c3533a))
+
+
+### Features
+
+* **map:** add interactive route map with Leaflet ([0d97050](https://github.com/MaksimZadar/road-trip/commit/0d97050d55eac5762c811a416904bf723a5cb30f))
+
 # [0.3.0](https://github.com/MaksimZadar/road-trip/compare/v0.2.0...v0.3.0) (2026-01-31)
 
 ### Features
