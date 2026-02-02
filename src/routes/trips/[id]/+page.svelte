@@ -16,7 +16,9 @@
 		Plus,
 		Check,
 		CloudSun,
-		Clock
+		Clock,
+		Pencil,
+		Moon
 	} from '@lucide/svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -31,6 +33,42 @@
 	let isChecklistCollapsed = $state(false);
 	let showNewCategoryInput = $state(false);
 	let selectedCategoryId = $state('');
+	let editingOriginTime = $state(false);
+	let editingStopId = $state<string | null>(null);
+	let editingArrivalTime = $state('');
+	let editingDepartureTime = $state('');
+
+	function calculateDurationFromTimes(arrival: string, departure: string): number {
+		if (!arrival || !departure) return 0;
+		const [arrHours, arrMins] = arrival.split(':').map(Number);
+		const [depHours, depMins] = departure.split(':').map(Number);
+
+		let arrMinutes = arrHours * 60 + arrMins;
+		let depMinutes = depHours * 60 + depMins;
+
+		// Handle overnight
+		if (depMinutes < arrMinutes) {
+			depMinutes += 24 * 60;
+		}
+
+		return depMinutes - arrMinutes;
+	}
+
+	function formatDurationMinutes(minutes: number | null) {
+		if (minutes === null || minutes === 0) return '';
+		if (minutes < 60) return `${minutes} min`;
+		const hours = Math.floor(minutes / 60);
+		const remainingMins = minutes % 60;
+		return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+	}
+
+	function formatTime(timeString: string | null) {
+		if (!timeString) return null;
+		const [hours, minutes] = timeString.split(':').map(Number);
+		const period = hours >= 12 ? 'PM' : 'AM';
+		const displayHours = hours % 12 || 12;
+		return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+	}
 
 	const itemsByCategory = $derived.by(() => {
 		const items = data.trip.checklist;
@@ -164,10 +202,23 @@
 				<div class="flex items-center gap-2">
 					<Clock class="h-5 w-5 text-primary" />
 					<div>
-						<p class="text-xs text-muted-foreground">Est. Duration</p>
+						<p class="text-xs text-muted-foreground">Driving Time</p>
 						<p class="font-semibold">{formatDuration(data.tripStats.totalDurationSeconds)}</p>
 					</div>
 				</div>
+				{#if data.totalStopDurationMinutes > 0}
+					<div class="flex items-center gap-2">
+						<Route class="h-5 w-5 text-primary" />
+						<div>
+							<p class="text-xs text-muted-foreground">Total Trip Time</p>
+							<p class="font-semibold">
+								{formatDuration(
+									(data.tripStats.totalDurationSeconds || 0) + data.totalStopDurationMinutes * 60
+								)}
+							</p>
+						</div>
+					</div>
+				{/if}
 				<div class="flex items-center gap-2">
 					<MapPin class="h-5 w-5 text-primary" />
 					<div>
@@ -207,8 +258,53 @@
 									<div
 										class="group block flex-1 rounded-lg border border-border p-3 transition-colors"
 									>
-										<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
-										<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
+										<div class="flex items-start justify-between">
+											<div>
+												<h3 class="text-lg leading-none font-semibold">Starting Point</h3>
+												<p class="mt-2 text-muted-foreground">{data.trip.origin.displayName}</p>
+											</div>
+											<Button
+												variant="ghost"
+												size="icon"
+												class="h-8 w-8"
+												onclick={() => (editingOriginTime = true)}
+											>
+												<Pencil class="h-4 w-4" />
+											</Button>
+										</div>
+										{#if editingOriginTime}
+											<form
+												action="?/updateDepartureTime"
+												method="POST"
+												use:enhance={() => {
+													return async ({ update }) => {
+														await update();
+														editingOriginTime = false;
+													};
+												}}
+												class="mt-3 flex items-center gap-2"
+											>
+												<Input
+													type="time"
+													name="departureTime"
+													value={data.trip.departureTime || ''}
+													class="w-32"
+												/>
+												<Button type="submit" size="sm">Save</Button>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onclick={() => (editingOriginTime = false)}
+												>
+													Cancel
+												</Button>
+											</form>
+										{:else if data.trip.departureTime}
+											<p class="mt-2 text-sm font-medium text-primary">
+												Depart: {formatTime(data.trip.departureTime)}
+											</p>
+										{/if}
 										{#if data.weatherData[data.trip.origin.id]}
 											<div class="mt-2">
 												<WeatherCard
@@ -237,6 +333,7 @@
 							{#each data.trip.stops as stop, i (stop.placeId)}
 								{@const prevPlace =
 									i === 0 ? data.trip.origin.displayName : data.trip.stops[i - 1].place.displayName}
+								{@const timelineEntry = data.timeline && data.timeline[i] ? data.timeline[i] : null}
 								<div class="flex gap-4">
 									<div class="flex flex-col items-center">
 										<div class="rounded-full bg-muted p-2">
@@ -245,34 +342,154 @@
 										<div class="w-0.5 grow bg-muted"></div>
 									</div>
 									<div class="flex-1">
-										<a
-											href={getDirectionsUrl(prevPlace, stop.place.displayName)}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="group block rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-										>
-											<div class="flex items-center justify-between">
-												<div>
-													<h3 class="text-base leading-none font-medium group-hover:text-primary">
+										<div class="group block rounded-lg border border-border p-3 transition-colors">
+											{#if stop.isLayover}
+												<div
+													class="mb-2 flex items-center gap-1 text-xs font-medium text-amber-600"
+												>
+													<Moon class="h-3 w-3" />
+													<span>Staying overnight</span>
+												</div>
+											{/if}
+											<div class="flex items-start justify-between">
+												<a
+													href={getDirectionsUrl(prevPlace, stop.place.displayName)}
+													target="_blank"
+													rel="noopener noreferrer"
+													class="flex-1 group-hover:text-primary"
+												>
+													<h3 class="text-base leading-none font-medium">
 														Stop {stop.order + 1}
 													</h3>
 													<p class="mt-2 text-sm text-muted-foreground">
 														{stop.place.displayName}
 													</p>
-												</div>
-												<MapPin
-													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-												/>
+												</a>
+												<Button
+													variant="ghost"
+													size="icon"
+													class="h-8 w-8"
+													onclick={() => {
+														editingStopId = stop.placeId;
+														// Use calculated arrival time for non-layover stops
+														editingArrivalTime =
+															timelineEntry?.arrivalTimeRaw || stop.arrivalTime || '';
+														editingDepartureTime = stop.departureTime || '';
+													}}
+												>
+													<Pencil class="h-4 w-4" />
+												</Button>
 											</div>
+
+											{#if editingStopId === stop.placeId}
+												{@const isArrivalCalculated = timelineEntry?.isArrivalCalculated}
+												<form
+													action="?/updateStopDuration"
+													method="POST"
+													use:enhance={() => {
+														return async ({ update }) => {
+															await update();
+															editingStopId = null;
+														};
+													}}
+													class="mt-3 space-y-3"
+												>
+													<input type="hidden" name="placeId" value={stop.placeId} />
+													<div class="grid grid-cols-2 gap-2">
+														<div>
+															{#if isArrivalCalculated}
+																<!-- Auto-calculated arrival time - read only for all stops -->
+																<input
+																	type="hidden"
+																	name="arrivalTime"
+																	value={editingArrivalTime}
+																/>
+																<div
+																	class="rounded-md border border-input bg-muted px-3 py-2 text-sm"
+																>
+																	<span class="text-muted-foreground"
+																		>{formatTime(editingArrivalTime)}</span
+																	>
+																	<span class="ml-1 text-xs text-amber-600">(auto)</span>
+																</div>
+															{:else}
+																<!-- Manual arrival time when auto-calc not available -->
+																<Input
+																	type="time"
+																	name="arrivalTime"
+																	value={editingArrivalTime}
+																	onchange={(e) => (editingArrivalTime = e.currentTarget.value)}
+																	class="w-full"
+																	aria-label="Arrival time"
+																/>
+															{/if}
+														</div>
+														<div>
+															<Input
+																type="time"
+																name="departureTime"
+																value={editingDepartureTime}
+																onchange={(e) => (editingDepartureTime = e.currentTarget.value)}
+																class="w-full"
+																aria-label="Departure time"
+															/>
+														</div>
+													</div>
+													{#if editingArrivalTime && editingDepartureTime}
+														{@const duration = calculateDurationFromTimes(
+															editingArrivalTime,
+															editingDepartureTime
+														)}
+														<p class="text-xs text-muted-foreground">
+															Duration: {formatDurationMinutes(duration)}
+														</p>
+													{/if}
+													<div class="flex items-center gap-2">
+														<Checkbox
+															name="isLayover"
+															checked={stop.isLayover || false}
+															value="true"
+														/>
+														<span class="text-sm">Staying overnight (layover)</span>
+													</div>
+													<div class="flex gap-2">
+														<Button type="submit" size="sm">Save</Button>
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															onclick={() => (editingStopId = null)}
+														>
+															Cancel
+														</Button>
+													</div>
+												</form>
+											{:else if timelineEntry}
+												<div class="mt-2 flex items-center gap-2 text-sm">
+													<span class="text-muted-foreground">
+														Arrive: {timelineEntry.arrivalTime}
+													</span>
+													{#if timelineEntry.departureTime}
+														<span class="text-muted-foreground">•</span>
+														<span class="font-medium text-primary">
+															Depart: {timelineEntry.departureTime}
+														</span>
+														<span class="text-xs text-muted-foreground">
+															({formatDurationMinutes(timelineEntry.durationMinutes)})
+														</span>
+													{/if}
+												</div>
+											{/if}
+
 											{#if data.weatherData[stop.place.id]}
-												<div class="mt-1">
+												<div class="mt-2">
 													<WeatherCard
 														weather={data.weatherData[stop.place.id]}
 														tripDate={new Date(data.trip.plannedDate)}
 													/>
 												</div>
 											{/if}
-										</a>
+										</div>
 										<!-- Distance between Stops -->
 										{#if data.routes[i + 1]}
 											{@const route = data.routes[i + 1]}
@@ -297,6 +514,36 @@
 									data.trip.stops.length > 0
 										? data.trip.stops[data.trip.stops.length - 1].place.displayName
 										: data.trip.origin.displayName}
+								{@const finalArrivalTime =
+									data.timeline && data.timeline.length > 0 && data.routes[data.routes.length - 1]
+										? (() => {
+												const lastStop = data.timeline[data.timeline.length - 1];
+												const lastRoute = data.routes[data.routes.length - 1];
+												if (!lastStop.departureTime || !lastRoute?.durationSeconds) return null;
+
+												// Parse departure time
+												const [hours, minutes] = lastStop.departureTime
+													.replace(' AM', '')
+													.replace(' PM', '')
+													.split(':')
+													.map(Number);
+												const isPM = lastStop.departureTime.includes('PM');
+												let currentMinutes =
+													(isPM && hours !== 12 ? hours + 12 : hours === 12 && !isPM ? 0 : hours) *
+														60 +
+													minutes;
+
+												// Add final route duration
+												currentMinutes += Math.round(lastRoute.durationSeconds / 60);
+
+												// Format back to time string
+												const finalHours = Math.floor(currentMinutes / 60) % 24;
+												const finalMins = currentMinutes % 60;
+												const finalPeriod = finalHours >= 12 ? 'PM' : 'AM';
+												const finalDisplayHours = finalHours % 12 || 12;
+												return `${finalDisplayHours}:${finalMins.toString().padStart(2, '0')} ${finalPeriod}`;
+											})()
+										: null}
 								<div class="flex gap-4">
 									<div class="flex flex-col items-center">
 										<div class="rounded-full bg-destructive/10 p-2">
@@ -324,6 +571,11 @@
 													class="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 												/>
 											</div>
+											{#if finalArrivalTime}
+												<p class="mt-2 text-sm font-medium text-primary">
+													Arrive: {finalArrivalTime}
+												</p>
+											{/if}
 											{#if data.weatherData[data.trip.destination.id]}
 												<div class="mt-1">
 													<WeatherCard

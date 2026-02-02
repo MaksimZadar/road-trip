@@ -84,6 +84,88 @@ export const load: PageServerLoad = async ({ params }) => {
 		totalStops: sequence.length
 	};
 
+	// Build timeline with automatic arrival time calculation for all stops
+	interface TimelineEntry {
+		arrivalTime: string | null;
+		arrivalTimeRaw: string | null; // For form input (24h format)
+		departureTime: string | null;
+		departureTimeRaw: string | null; // For form input (24h format)
+		durationMinutes: number;
+		isLayover: boolean;
+		isArrivalCalculated: boolean;
+	}
+
+	const timeline: TimelineEntry[] = [];
+	let totalStopDurationMinutes = 0;
+	let previousDepartureMinutes: number | null = null;
+
+	// Start with origin departure time if available
+	if (trip.departureTime) {
+		const [hours, mins] = trip.departureTime.split(':').map(Number);
+		previousDepartureMinutes = hours * 60 + mins;
+	}
+
+	for (let i = 0; i < trip.stops.length; i++) {
+		const stop = trip.stops[i];
+		const route = routes[i]; // Route from previous location to this stop
+		let durationMinutes = 0;
+		let arrivalTimeRaw: string | null = null;
+		let arrivalTimeFormatted: string | null = null;
+		let isArrivalCalculated = false;
+
+		// Calculate arrival time automatically for ALL stops based on driving time
+		if (previousDepartureMinutes !== null && route?.durationSeconds) {
+			const arrivalMinutes = previousDepartureMinutes + Math.round(route.durationSeconds / 60);
+			const hours = Math.floor(arrivalMinutes / 60) % 24;
+			const mins = arrivalMinutes % 60;
+			arrivalTimeRaw = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+			arrivalTimeFormatted = formatTime(arrivalTimeRaw);
+			isArrivalCalculated = true;
+		} else if (stop.arrivalTime) {
+			// Fallback to stored arrival time if auto-calc not possible
+			arrivalTimeRaw = stop.arrivalTime;
+			arrivalTimeFormatted = formatTime(stop.arrivalTime);
+		}
+
+		// Calculate duration
+		if (arrivalTimeRaw && stop.departureTime) {
+			const [arrHours, arrMins] = arrivalTimeRaw.split(':').map(Number);
+			const [depHours, depMins] = stop.departureTime.split(':').map(Number);
+
+			let arrMinutes = arrHours * 60 + arrMins;
+			let depMinutes = depHours * 60 + depMins;
+
+			// Handle overnight
+			if (depMinutes < arrMinutes) {
+				depMinutes += 24 * 60;
+			}
+
+			durationMinutes = depMinutes - arrMinutes;
+		}
+
+		totalStopDurationMinutes += durationMinutes;
+
+		// Update previous departure time for next stop calculation
+		if (stop.departureTime) {
+			const [depHours, depMins] = stop.departureTime.split(':').map(Number);
+			previousDepartureMinutes = depHours * 60 + depMins;
+		} else if (arrivalTimeRaw) {
+			// If no departure time set, use arrival time as fallback
+			const [arrHours, arrMins] = arrivalTimeRaw.split(':').map(Number);
+			previousDepartureMinutes = arrHours * 60 + arrMins;
+		}
+
+		timeline.push({
+			arrivalTime: arrivalTimeFormatted,
+			arrivalTimeRaw,
+			departureTime: stop.departureTime ? formatTime(stop.departureTime) : null,
+			departureTimeRaw: stop.departureTime || null,
+			durationMinutes,
+			isLayover: stop.isLayover || false,
+			isArrivalCalculated
+		});
+	}
+
 	return {
 		trip,
 		routes,
@@ -91,9 +173,29 @@ export const load: PageServerLoad = async ({ params }) => {
 		hasMissingDistances,
 		weatherData,
 		isWeatherRefreshAvailable,
-		tripStats
+		tripStats,
+		timeline,
+		totalStopDurationMinutes
 	};
 };
+
+function formatTime(timeInput: string | number): string {
+	let hours: number;
+	let mins: number;
+
+	if (typeof timeInput === 'string') {
+		// Parse time string like "14:30"
+		[hours, mins] = timeInput.split(':').map(Number);
+	} else {
+		// Convert minutes from midnight
+		hours = Math.floor(timeInput / 60) % 24;
+		mins = timeInput % 60;
+	}
+
+	const period = hours >= 12 ? 'PM' : 'AM';
+	const displayHours = hours % 12 || 12;
+	return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
+}
 
 export const actions: Actions = {
 	calculateDistances: async ({ params }) => {
@@ -282,6 +384,60 @@ export const actions: Actions = {
 		const id = formData.get('id') as string;
 
 		await db.delete(schema.checklistItem).where(eq(schema.checklistItem.id, id));
+
+		return { success: true };
+	},
+	updateDepartureTime: async ({ params, request }) => {
+		const formData = await request.formData();
+		const departureTime = formData.get('departureTime') as string;
+
+		if (!departureTime) {
+			await db
+				.update(schema.roadTrip)
+				.set({ departureTime: null })
+				.where(eq(schema.roadTrip.id, params.id));
+		} else {
+			await db
+				.update(schema.roadTrip)
+				.set({ departureTime })
+				.where(eq(schema.roadTrip.id, params.id));
+		}
+
+		return { success: true };
+	},
+	updateStopDuration: async ({ request }) => {
+		const formData = await request.formData();
+		const placeId = formData.get('placeId') as string;
+		const arrivalTime = formData.get('arrivalTime') as string;
+		const departureTime = formData.get('departureTime') as string;
+		const isLayover = formData.get('isLayover') === 'true';
+
+		// Calculate duration from arrival and departure times
+		let durationMinutes = 0;
+		if (arrivalTime && departureTime) {
+			const [arrHours, arrMins] = arrivalTime.split(':').map(Number);
+			const [depHours, depMins] = departureTime.split(':').map(Number);
+
+			let arrMinutes = arrHours * 60 + arrMins;
+			let depMinutes = depHours * 60 + depMins;
+
+			// Handle overnight (departure is on next day)
+			if (depMinutes < arrMinutes) {
+				depMinutes += 24 * 60; // Add 24 hours
+			}
+
+			durationMinutes = depMinutes - arrMinutes;
+		}
+
+		await db
+			.update(schema.roadTripStops)
+			.set({
+				arrivalTime: arrivalTime || null,
+				departureTime: departureTime || null,
+				durationMinutes,
+				isLayover
+			})
+			.where(eq(schema.roadTripStops.placeId, placeId));
 
 		return { success: true };
 	}

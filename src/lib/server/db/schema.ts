@@ -6,6 +6,7 @@ import {
 	primaryKey,
 	doublePrecision,
 	text,
+	time,
 	timestamp,
 	uuid,
 	varchar,
@@ -17,6 +18,7 @@ export const roadTrip = pgTable('road_trip', {
 	title: varchar('title', { length: 128 }).notNull(),
 	description: varchar('description', { length: 500 }),
 	plannedDate: date('planned_date', { mode: 'date' }).notNull(),
+	departureTime: time('departure_time', { withTimezone: false }),
 	originId: uuid('origin_id')
 		.references(() => places.id)
 		.notNull(),
@@ -75,7 +77,11 @@ export const roadTripStops = pgTable(
 		placeId: uuid('place_id')
 			.notNull()
 			.references(() => places.id, { onDelete: 'cascade' }),
-		order: integer('order').notNull()
+		order: integer('order').notNull(),
+		durationMinutes: integer('duration_minutes').default(0),
+		isLayover: boolean('is_layover').default(false),
+		arrivalTime: time('arrival_time', { withTimezone: false }),
+		departureTime: time('departure_time', { withTimezone: false })
 	},
 	(t) => [primaryKey({ columns: [t.roadTripId, t.placeId] })]
 );
