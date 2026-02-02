@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { decodePolyline } from '$lib/utils/polyline';
-	import 'leaflet/dist/leaflet.css';
-
+	import { Map, TileLayer, Marker, Popup, Polyline } from 'sveaflet';
 	interface Place {
 		id: string;
 		name: string;
@@ -33,13 +31,12 @@
 		routes: (Route | null)[];
 	}
 
+	// eslint-disable-next-line svelte/no-unused-props
 	let { origin, destination, stops, routes }: Props = $props();
 
-	let mapContainer: HTMLDivElement;
-	let map: any;
+	let mapInstance: import('leaflet').Map | undefined = $state(undefined);
 	let isFullscreen = $state(false);
 	let isCollapsed = $state(false);
-	let mapReady = $state(false);
 
 	function getDirectionsUrl(from: string, to: string) {
 		return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`;
@@ -47,7 +44,7 @@
 
 	function toggleFullscreen() {
 		if (!document.fullscreenElement) {
-			mapContainer?.requestFullscreen();
+			document.documentElement.requestFullscreen();
 			isFullscreen = true;
 		} else {
 			document.exitFullscreen();
@@ -55,150 +52,48 @@
 		}
 	}
 
-	onMount(async () => {
-		if (!browser) return;
-
-		const L = await import('leaflet');
-
-		// Initialize map
-		map = L.map(mapContainer);
-
-		// Add OpenStreetMap tiles
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap contributors'
-		}).addTo(map);
-
-		// Create bounds to fit all markers
-		let bounds: any = null;
-
-		// Add origin marker (blue)
-		if (origin.latitude && origin.longitude) {
-			const originMarker = L.marker([origin.latitude, origin.longitude], {
-				icon: L.divIcon({
-					className: 'custom-marker origin-marker',
-					html: '<div class="marker-pin origin-pin"></div>',
-					iconSize: [30, 42],
-					iconAnchor: [15, 42]
-				})
-			})
-				.addTo(map)
-				.bindPopup(
-					`
-					<div class="marker-popup">
-						<strong>Starting Point</strong>
-						<p>${origin.displayName}</p>
-					</div>
-				`
-				);
-			if (!bounds) {
-				bounds = L.latLngBounds(
-					[origin.latitude, origin.longitude],
-					[origin.latitude, origin.longitude]
-				);
-			} else {
-				bounds.extend([origin.latitude, origin.longitude]);
-			}
-		}
-
-		// Add stop markers (gray with numbers)
-		stops.forEach((stop, index) => {
-			if (stop.place.latitude && stop.place.longitude) {
-				// Calculate the "from" location for directions
-				const fromPlace = index === 0 ? origin : stops[index - 1].place;
-				const stopMarker = L.marker([stop.place.latitude, stop.place.longitude], {
-					icon: L.divIcon({
-						className: 'custom-marker stop-marker',
-						html: `<div class="marker-pin stop-pin">${index + 1}</div>`,
-						iconSize: [30, 42],
-						iconAnchor: [15, 42]
-					})
-				})
-					.addTo(map)
-					.bindPopup(
-						`
-						<div class="marker-popup">
-							<strong>Stop ${index + 1}</strong>
-							<p>${stop.place.displayName}</p>
-							<a href="${getDirectionsUrl(fromPlace.displayName, stop.place.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
-								Get Directions
-							</a>
-						</div>
-					`
-					);
-				if (!bounds) {
-					bounds = L.latLngBounds(
-						[stop.place.latitude, stop.place.longitude],
-						[stop.place.latitude, stop.place.longitude]
-					);
-				} else {
-					bounds.extend([stop.place.latitude, stop.place.longitude]);
-				}
-			}
-		});
-
-		// Add destination marker (red)
-		if (destination.latitude && destination.longitude) {
-			// Calculate the "from" location for directions (last stop or origin)
-			const fromPlace = stops.length > 0 ? stops[stops.length - 1].place : origin;
-			const destMarker = L.marker([destination.latitude, destination.longitude], {
-				icon: L.divIcon({
-					className: 'custom-marker destination-marker',
-					html: '<div class="marker-pin destination-pin"></div>',
-					iconSize: [30, 42],
-					iconAnchor: [15, 42]
-				})
-			})
-				.addTo(map)
-				.bindPopup(
-					`
-					<div class="marker-popup">
-						<strong>Final Destination</strong>
-						<p>${destination.displayName}</p>
-						<a href="${getDirectionsUrl(fromPlace.displayName, destination.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
-							Get Directions
-						</a>
-					</div>
-				`
-				);
-			if (!bounds) {
-				bounds = L.latLngBounds(
-					[destination.latitude, destination.longitude],
-					[destination.latitude, destination.longitude]
-				);
-			} else {
-				bounds.extend([destination.latitude, destination.longitude]);
-			}
-		}
-
-		// Draw route polylines
-		routes.forEach((route) => {
-			if (route?.polyline) {
-				const decodedCoords = decodePolyline(route.polyline);
-				if (decodedCoords.length > 0) {
-					L.polyline(decodedCoords, {
-						color: '#3b82f6',
-						weight: 4,
-						opacity: 0.8,
-						smoothFactor: 1
-					}).addTo(map);
-				}
-			}
-		});
-
-		// Fit map to show all markers with padding
-		if (bounds.isValid()) {
-			map.fitBounds(bounds, { padding: [50, 50] });
-		}
-
-		// Handle fullscreen change
-		document.addEventListener('fullscreenchange', () => {
+	// Handle fullscreen change
+	$effect(() => {
+		const handler = () => {
 			isFullscreen = !!document.fullscreenElement;
-			if (map) {
-				setTimeout(() => map.invalidateSize(), 100);
+			if (mapInstance) {
+				setTimeout(() => mapInstance?.invalidateSize(), 100);
+			}
+		};
+		document.addEventListener('fullscreenchange', handler);
+		return () => document.removeEventListener('fullscreenchange', handler);
+	});
+
+	// Calculate all coordinates for bounds
+	function getAllCoordinates(): [number, number][] {
+		const coords: [number, number][] = [];
+		if (origin.latitude && origin.longitude) {
+			coords.push([origin.latitude, origin.longitude]);
+		}
+		stops.forEach((stop) => {
+			if (stop.place.latitude && stop.place.longitude) {
+				coords.push([stop.place.latitude, stop.place.longitude]);
 			}
 		});
+		if (destination.latitude && destination.longitude) {
+			coords.push([destination.latitude, destination.longitude]);
+		}
+		return coords;
+	}
+
+	// Fit map to bounds when map instance is ready
+	$effect(() => {
+		if (mapInstance) {
+			const coords = getAllCoordinates();
+			if (coords.length > 0) {
+				const bounds = L.latLngBounds(coords);
+				mapInstance.fitBounds(bounds, { padding: [50, 50] });
+			}
+		}
 	});
+
+	// Import L for bounds
+	import * as L from 'leaflet';
 </script>
 
 <div class="map-card" class:fullscreen={isFullscreen}>
@@ -242,7 +137,104 @@
 	</div>
 
 	{#if !isCollapsed}
-		<div class="map-container" bind:this={mapContainer}></div>
+		<div class="map-wrapper">
+			{#if browser}
+				<Map
+					options={{
+						center:
+							origin.latitude && origin.longitude
+								? [origin.latitude, origin.longitude]
+								: [39.8283, -98.5795], // Center of USA
+						zoom: 4
+					}}
+					bind:instance={mapInstance}
+				>
+					<TileLayer
+						url={'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+						options={{
+							maxZoom: 19,
+							attribution: '© OpenStreetMap contributors'
+						}}
+					/>
+
+					<!-- Origin marker -->
+					{#if origin.latitude && origin.longitude}
+						<Marker latLng={[origin.latitude, origin.longitude]}>
+							<Popup
+								options={{
+									content: `
+									<div class="marker-popup">
+										<strong>Starting Point</strong>
+										<p>${origin.displayName}</p>
+									</div>
+								`
+								}}
+							/>
+						</Marker>
+					{/if}
+
+					<!-- Stop markers -->
+					{#each stops as stop, index (stop.placeId)}
+						{#if stop.place.latitude && stop.place.longitude}
+							{@const fromPlace = index === 0 ? origin : stops[index - 1].place}
+							<Marker latLng={[stop.place.latitude, stop.place.longitude]}>
+								<Popup
+									options={{
+										content: `
+										<div class="marker-popup">
+											<strong>Stop ${index + 1}</strong>
+											<p>${stop.place.displayName}</p>
+											<a href="${getDirectionsUrl(fromPlace.displayName, stop.place.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
+												Get Directions
+											</a>
+										</div>
+									`
+									}}
+								/>
+							</Marker>
+						{/if}
+					{/each}
+
+					<!-- Destination marker -->
+					{#if destination.latitude && destination.longitude}
+						{@const fromPlace = stops.length > 0 ? stops[stops.length - 1].place : origin}
+						<Marker latLng={[destination.latitude, destination.longitude]}>
+							<Popup
+								options={{
+									content: `
+									<div class="marker-popup">
+										<strong>Final Destination</strong>
+										<p>${destination.displayName}</p>
+										<a href="${getDirectionsUrl(fromPlace.displayName, destination.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
+											Get Directions
+										</a>
+									</div>
+								`
+								}}
+							/>
+						</Marker>
+					{/if}
+
+					<!-- Route polylines -->
+					{#each routes as route, routeIndex (routeIndex)}
+						{#if route?.polyline}
+							{@const decodedCoords = decodePolyline(route.polyline)}
+							{#if decodedCoords.length > 0}
+								<Polyline
+									latLngs={decodedCoords}
+									options={{
+										color: '#3b82f6',
+										weight: 4,
+										opacity: 0.8,
+										smoothFactor: 1
+									}}
+								/>
+							{/if}
+						{/if}
+					{/each}
+				</Map>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -318,13 +310,13 @@
 		height: 1rem;
 	}
 
-	.map-container {
+	.map-wrapper {
 		flex: 1;
 		min-height: 350px;
 		position: relative;
 	}
 
-	.map-card.fullscreen .map-container {
+	.map-card.fullscreen .map-wrapper {
 		min-height: calc(100vh - 80px);
 	}
 
