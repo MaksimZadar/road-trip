@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import type { PageServerLoad, Actions } from './$types';
 
+export const ssr = false;
 export const load: PageServerLoad = async ({ params }) => {
 	const trip = await db.query.roadTrip.findFirst({
 		where: (roadTrip, { eq }) => eq(roadTrip.id, params.id),

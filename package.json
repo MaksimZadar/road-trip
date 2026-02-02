@@ -55,6 +55,7 @@
 		"drizzle-orm": "^0.45.1",
 		"leaflet": "^1.9.4",
 		"mode-watcher": "^1.1.0",
-		"postgres": "^3.4.8"
+		"postgres": "^3.4.8",
+		"sveaflet": "^0.1.4"
 	}
 }

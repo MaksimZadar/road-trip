@@ -28,7 +28,6 @@
 	import TripMap from '$lib/components/TripMap.svelte';
 
 	let { data } = $props();
-	let isTimelineCollapsed = $state(false);
 	let isChecklistCollapsed = $state(false);
 	let showNewCategoryInput = $state(false);
 	let selectedCategoryId = $state('');
