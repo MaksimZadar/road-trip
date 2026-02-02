@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/MaksimZadar/road-trip/compare/v0.4.0...v0.5.0) (2026-02-02)
+
+
+### Features
+
+* **map:** use sveaflet ([f2fa3dd](https://github.com/MaksimZadar/road-trip/commit/f2fa3dd6c1e29a95e52f4839131073ec9f29a3a8))
+
 # [0.4.0](https://github.com/MaksimZadar/road-trip/compare/v0.3.0...v0.4.0) (2026-02-01)
 
 
