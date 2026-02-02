@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/MaksimZadar/road-trip/compare/v0.5.0...v0.6.0) (2026-02-02)
+
+
+### Features
+
+* **stop-duration:** add ability for users to define stop arrival and departure ([cd8ec3f](https://github.com/MaksimZadar/road-trip/commit/cd8ec3f1b3ac877f5cf777caff294359895896fd))
+
 # [0.5.0](https://github.com/MaksimZadar/road-trip/compare/v0.4.0...v0.5.0) (2026-02-02)
 
 
