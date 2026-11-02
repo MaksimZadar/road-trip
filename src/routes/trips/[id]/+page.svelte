@@ -833,7 +833,7 @@
 		<div class="mx-auto flex max-w-md items-stretch gap-1 px-2">
 			<Tabs.Trigger
 				value="itinerary"
-				class="gap-1 px-1 text-xs"
+				class="gap-1 px-2 text-xs"
 				aria-current={activeTab === 'itinerary' ? 'page' : undefined}
 			>
 				<ListOrdered aria-hidden="true" />
@@ -841,7 +841,7 @@
 			</Tabs.Trigger>
 			<Tabs.Trigger
 				value="map"
-				class="gap-1 px-1 text-xs"
+				class="gap-1 px-2 text-xs"
 				aria-current={activeTab === 'map' ? 'page' : undefined}
 			>
 				<MapIcon aria-hidden="true" />
@@ -849,7 +849,7 @@
 			</Tabs.Trigger>
 			<Tabs.Trigger
 				value="packing"
-				class="gap-1 px-1 text-xs"
+				class="gap-1 px-2 text-xs"
 				aria-current={activeTab === 'packing' ? 'page' : undefined}
 			>
 				<Backpack aria-hidden="true" />
@@ -857,7 +857,7 @@
 			</Tabs.Trigger>
 			<Tabs.Trigger
 				value="budget"
-				class="gap-1 px-1 text-xs"
+				class="gap-1 px-2 text-xs"
 				aria-current={activeTab === 'budget' ? 'page' : undefined}
 			>
 				<Wallet aria-hidden="true" />
