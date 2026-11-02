@@ -33,7 +33,7 @@
 </script>
 
 {#snippet card()}
-	<Card.Root class={cn('text-card-foreground', status === 'next' && 'bg-mustard-tint')}>
+	<Card.Root class={cn('relative text-card-foreground', status === 'next' && 'bg-mustard-tint')}>
 		<Card.Content class="space-y-2 p-4">
 			<div class="flex items-start justify-between gap-2">
 				<h3 class="text-base leading-snug font-semibold">{name}</h3>
@@ -52,8 +52,21 @@
 					<span class="text-sm text-muted-foreground">Arrive {arrivalTime}</span>
 				{/if}
 			</div>
-			{@render children?.()}
+			{#if children}
+				<div class="relative z-20 space-y-2">
+					{@render children?.()}
+				</div>
+			{/if}
 		</Card.Content>
+		{#if goHref}
+			<a
+				class="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-2 focus-visible:-outline-offset-2"
+				href={goHref}
+				target="_blank"
+				rel="noopener noreferrer"
+				aria-label={`Directions to ${name}`}
+			></a>
+		{/if}
 	</Card.Root>
 {/snippet}
 
@@ -81,13 +94,7 @@
 	</div>
 
 	<div class="relative flex-1">
-		{#if goHref}
-			<a href={goHref} target="_blank" rel="noopener noreferrer" class="group block">
-				{@render card()}
-			</a>
-		{:else}
-			{@render card()}
-		{/if}
+		{@render card()}
 
 		{#if status === 'done'}
 			<StopStamp class="-top-3 -right-3" />
