@@ -830,7 +830,7 @@
 	<Tabs.List
 		class="fixed inset-x-0 bottom-0 z-40 w-full rounded-none border-x-0 border-b-0 pt-1 pb-[max(env(safe-area-inset-bottom),0.25rem)]"
 	>
-		<div class="mx-auto flex max-w-md items-stretch gap-1 px-2">
+		<div class="mx-auto grid max-w-md grid-cols-4 items-stretch gap-1 px-2">
 			<Tabs.Trigger
 				value="itinerary"
 				class="gap-1 px-2 text-xs"
