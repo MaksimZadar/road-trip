@@ -1,28 +1,24 @@
 # [0.6.0](https://github.com/MaksimZadar/road-trip/compare/v0.5.0...v0.6.0) (2026-02-02)
 
-
 ### Features
 
-* **stop-duration:** add ability for users to define stop arrival and departure ([cd8ec3f](https://github.com/MaksimZadar/road-trip/commit/cd8ec3f1b3ac877f5cf777caff294359895896fd))
+- **stop-duration:** add ability for users to define stop arrival and departure ([cd8ec3f](https://github.com/MaksimZadar/road-trip/commit/cd8ec3f1b3ac877f5cf777caff294359895896fd))
 
 # [0.5.0](https://github.com/MaksimZadar/road-trip/compare/v0.4.0...v0.5.0) (2026-02-02)
 
-
 ### Features
 
-* **map:** use sveaflet ([f2fa3dd](https://github.com/MaksimZadar/road-trip/commit/f2fa3dd6c1e29a95e52f4839131073ec9f29a3a8))
+- **map:** use sveaflet ([f2fa3dd](https://github.com/MaksimZadar/road-trip/commit/f2fa3dd6c1e29a95e52f4839131073ec9f29a3a8))
 
 # [0.4.0](https://github.com/MaksimZadar/road-trip/compare/v0.3.0...v0.4.0) (2026-02-01)
 
-
 ### Bug Fixes
 
-* **map:** remove duplicate route timeline ([63bee60](https://github.com/MaksimZadar/road-trip/commit/63bee60c3135ae0837238964b896797518c3533a))
-
+- **map:** remove duplicate route timeline ([63bee60](https://github.com/MaksimZadar/road-trip/commit/63bee60c3135ae0837238964b896797518c3533a))
 
 ### Features
 
-* **map:** add interactive route map with Leaflet ([0d97050](https://github.com/MaksimZadar/road-trip/commit/0d97050d55eac5762c811a416904bf723a5cb30f))
+- **map:** add interactive route map with Leaflet ([0d97050](https://github.com/MaksimZadar/road-trip/commit/0d97050d55eac5762c811a416904bf723a5cb30f))
 
 # [0.3.0](https://github.com/MaksimZadar/road-trip/compare/v0.2.0...v0.3.0) (2026-01-31)
 

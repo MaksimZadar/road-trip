@@ -2,41 +2,69 @@
 
 @import 'tw-animate-css';
 
+@import '@fontsource/dm-sans/400.css';
+@import '@fontsource/dm-sans/500.css';
+@import '@fontsource/dm-sans/700.css';
+@import '@fontsource/alfa-slab-one/400.css';
+
 @custom-variant dark (&:is(.dark *));
 
+/* Retro travel-journal theme — light (cream/ink) values.
+   Dark theme is a later variable swap in .dark; not built yet. */
 :root {
-	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.13 0.028 261.692);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.13 0.028 261.692);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.13 0.028 261.692);
-	--primary: oklch(0.21 0.034 264.665);
-	--primary-foreground: oklch(0.985 0.002 247.839);
-	--secondary: oklch(0.967 0.003 264.542);
-	--secondary-foreground: oklch(0.21 0.034 264.665);
-	--muted: oklch(0.967 0.003 264.542);
-	--muted-foreground: oklch(0.551 0.027 264.364);
-	--accent: oklch(0.967 0.003 264.542);
-	--accent-foreground: oklch(0.21 0.034 264.665);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.928 0.006 264.531);
-	--input: oklch(0.928 0.006 264.531);
-	--ring: oklch(0.707 0.022 261.325);
+	--radius: 0.875rem;
+	/* cream #F7EFDD */
+	--background: oklch(0.954 0.025 86.9);
+	/* ink #22302F */
+	--foreground: oklch(0.296 0.019 190.7);
+	/* paper #FFF9EC */
+	--card: oklch(0.983 0.018 86.1);
+	--card-foreground: oklch(0.296 0.019 190.7);
+	--popover: oklch(0.983 0.018 86.1);
+	--popover-foreground: oklch(0.296 0.019 190.7);
+	/* terracotta #B4492A */
+	--primary: oklch(0.543 0.147 36.7);
+	--primary-foreground: oklch(0.983 0.018 86.1);
+	/* teal #1D5C58 */
+	--secondary: oklch(0.434 0.063 189.1);
+	--secondary-foreground: oklch(0.954 0.025 86.9);
+	/* #EFE6D0 / #55655F */
+	--muted: oklch(0.926 0.031 88.4);
+	--muted-foreground: oklch(0.491 0.022 170.7);
+	/* mustard #E5A92F */
+	--accent: oklch(0.772 0.146 80.1);
+	--accent-foreground: oklch(0.296 0.019 190.7);
+	/* deep red #9E2F23 — 6.36:1 on cream */
+	--destructive: oklch(0.472 0.149 29.8);
+	--border: oklch(0.296 0.019 190.7);
+	--input: oklch(0.296 0.019 190.7);
+	--ring: oklch(0.434 0.063 189.1);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.985 0.002 247.839);
-	--sidebar-foreground: oklch(0.13 0.028 261.692);
-	--sidebar-primary: oklch(0.21 0.034 264.665);
-	--sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-	--sidebar-accent: oklch(0.967 0.003 264.542);
-	--sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-	--sidebar-border: oklch(0.928 0.006 264.531);
-	--sidebar-ring: oklch(0.707 0.022 261.325);
+	--sidebar: oklch(0.983 0.018 86.1);
+	--sidebar-foreground: oklch(0.296 0.019 190.7);
+	--sidebar-primary: oklch(0.543 0.147 36.7);
+	--sidebar-primary-foreground: oklch(0.983 0.018 86.1);
+	--sidebar-accent: oklch(0.926 0.031 88.4);
+	--sidebar-accent-foreground: oklch(0.296 0.019 190.7);
+	--sidebar-border: oklch(0.296 0.019 190.7);
+	--sidebar-ring: oklch(0.434 0.063 189.1);
+	/* Retro travel-journal extras */
+	/* deep-teal #143F3D — headings */
+	--deep-teal: oklch(0.337 0.047 190.9);
+	/* mustard-light #F4C65E — large numbers on teal */
+	--mustard-light: oklch(0.847 0.132 85.3);
+	/* mustard-tint #FBE3A8 — next-stop card background */
+	--mustard-tint: oklch(0.922 0.08 88.4);
+	/* sand #EFE3C6 — map land */
+	--sand: oklch(0.918 0.04 88.2);
+	/* sea #A8D2CA — map water */
+	--sea: oklch(0.831 0.046 182.3);
+	/* dashed-grey #B7A785 — timeline lines */
+	--dashed-grey: oklch(0.733 0.05 85.7);
 }
 
 .dark {
@@ -46,7 +74,7 @@
 	--card-foreground: oklch(0.985 0.002 247.839);
 	--popover: oklch(0.21 0.034 264.665);
 	--popover-foreground: oklch(0.985 0.002 247.839);
-	--primary: oklch(0.928 0.006 264.531);
+	--primary: oklch(0.928 0.006 264.542);
 	--primary-foreground: oklch(0.21 0.034 264.665);
 	--secondary: oklch(0.278 0.033 256.848);
 	--secondary-foreground: oklch(0.985 0.002 247.839);
@@ -78,6 +106,11 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	--font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+	--font-heading: 'Alfa Slab One', Georgia, serif;
+	/* Hard offset shadows — no blur anywhere */
+	--shadow-hard: 3px 3px 0 0 var(--foreground);
+	--shadow-hard-lg: 5px 5px 0 0 var(--primary);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -109,6 +142,12 @@
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+	--color-deep-teal: var(--deep-teal);
+	--color-mustard-light: var(--mustard-light);
+	--color-mustard-tint: var(--mustard-tint);
+	--color-sand: var(--sand);
+	--color-sea: var(--sea);
+	--color-dashed-grey: var(--dashed-grey);
 }
 
 @layer base {
@@ -116,6 +155,6 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background font-sans text-foreground;
 	}
 }
