@@ -268,8 +268,10 @@
 	});
 </script>
 
-<header class="sticky top-0 z-30 border-b-2 border-border bg-card">
-	<div class="flex items-center justify-between gap-2 py-1.5">
+<header
+	class="sticky top-0 z-30 -mx-4 border-b-2 border-border bg-card px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+>
+	<div class="flex items-center justify-between gap-2 py-2">
 		<Button variant="ghost" size="sm" href="/trips" class="pl-0 hover:bg-transparent">
 			<ChevronLeft aria-hidden="true" />
 			Back to trips
@@ -564,7 +566,7 @@
 	<!-- Map -->
 	<Tabs.Content
 		value="map"
-		class="-mx-4 h-[calc(100dvh-8.5rem)] w-full overflow-hidden sm:-mx-6 lg:-mx-8"
+		class="-mx-4 h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] w-full overflow-hidden sm:-mx-6 lg:-mx-8"
 	>
 		<TripMap
 			origin={data.trip.origin}
@@ -825,21 +827,39 @@
 	</Tabs.Content>
 
 	<!-- Bottom tab bar -->
-	<Tabs.List class="fixed inset-x-0 bottom-0 z-40 w-full rounded-none border-x-0 border-b-0">
-		<div class="mx-auto flex max-w-md items-stretch">
-			<Tabs.Trigger value="itinerary" aria-current={activeTab === 'itinerary' ? 'page' : undefined}>
+	<Tabs.List
+		class="fixed inset-x-0 bottom-0 z-40 w-full rounded-none border-x-0 border-b-0 pt-1 pb-[env(safe-area-inset-bottom)]"
+	>
+		<div class="mx-auto flex max-w-md items-stretch gap-1 px-2">
+			<Tabs.Trigger
+				value="itinerary"
+				class="gap-1 px-1 text-xs"
+				aria-current={activeTab === 'itinerary' ? 'page' : undefined}
+			>
 				<ListOrdered aria-hidden="true" />
 				Itinerary
 			</Tabs.Trigger>
-			<Tabs.Trigger value="map" aria-current={activeTab === 'map' ? 'page' : undefined}>
+			<Tabs.Trigger
+				value="map"
+				class="gap-1 px-1 text-xs"
+				aria-current={activeTab === 'map' ? 'page' : undefined}
+			>
 				<MapIcon aria-hidden="true" />
 				Map
 			</Tabs.Trigger>
-			<Tabs.Trigger value="packing" aria-current={activeTab === 'packing' ? 'page' : undefined}>
+			<Tabs.Trigger
+				value="packing"
+				class="gap-1 px-1 text-xs"
+				aria-current={activeTab === 'packing' ? 'page' : undefined}
+			>
 				<Backpack aria-hidden="true" />
 				Packing
 			</Tabs.Trigger>
-			<Tabs.Trigger value="budget" aria-current={activeTab === 'budget' ? 'page' : undefined}>
+			<Tabs.Trigger
+				value="budget"
+				class="gap-1 px-1 text-xs"
+				aria-current={activeTab === 'budget' ? 'page' : undefined}
+			>
 				<Wallet aria-hidden="true" />
 				Budget
 			</Tabs.Trigger>
