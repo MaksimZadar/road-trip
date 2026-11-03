@@ -654,7 +654,7 @@
 	<!-- Packing -->
 	<Tabs.Content value="packing" class="pb-24">
 		<div class="mx-auto w-full max-w-md px-4 py-6">
-			<Card.Root>
+			<Card.Root class="py-6">
 				<Card.Header>
 					<div class="flex items-start justify-between">
 						<div class="space-y-1.5">
@@ -696,57 +696,61 @@
 									}}
 									class="space-y-2"
 								>
-									<div class="flex flex-col gap-2 sm:flex-row">
-										<Input name="item" placeholder="Add new item..." required class="sm:flex-1" />
-										<div class="flex gap-2">
+									<div class="flex flex-1 flex-row items-center justify-center gap-4 align-middle">
+										<div class="flex flex-1 flex-col flex-wrap gap-2">
+											<Input name="item" placeholder="Add new item..." required class="flex-2" />
 											{#if showNewCategoryInput}
-												<Input
-													name="newCategory"
-													placeholder="New category name..."
-													required
-													class="flex-1"
-												/>
-												<Button
-													type="button"
-													size="icon"
-													variant="outline"
-													class="shrink-0"
-													aria-label="Back to category list"
-													onclick={() => {
-														showNewCategoryInput = false;
-														selectedCategoryId = '';
-													}}
-												>
-													<ChevronLeft class="h-4 w-4" />
-												</Button>
-											{:else}
-												<Select.Root
-													type="single"
-													bind:value={selectedCategoryId}
-													onValueChange={(v) => {
-														showNewCategoryInput = v === 'new';
-													}}
-												>
-													<Select.Trigger class="w-full min-w-0 flex-1 sm:w-50 sm:flex-none">
-														{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
-															(selectedCategoryId === 'new'
-																? 'Add New Category...'
-																: 'No Category')}
-													</Select.Trigger>
-													<Select.Content>
-														<Select.Item value="">No Category</Select.Item>
-														{#each data.categories as cat (cat.id)}
-															<Select.Item value={cat.id}>{cat.name}</Select.Item>
-														{/each}
-														<Select.Separator />
-														<Select.Item value="new">+ Add New Category...</Select.Item>
-													</Select.Content>
-													<input
-														type="hidden"
-														name="categoryId"
-														value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+												<div class="flex flex-4 flex-row gap-2">
+													<Input
+														name="newCategory"
+														placeholder="New category name..."
+														required
+														class="flex-1"
 													/>
-												</Select.Root>
+													<Button
+														type="button"
+														size="icon"
+														variant="outline"
+														class="shrink-0"
+														aria-label="Back to category list"
+														onclick={() => {
+															showNewCategoryInput = false;
+															selectedCategoryId = '';
+														}}
+													>
+														<ChevronLeft class="h-4 w-4" />
+													</Button>
+												</div>
+											{:else}
+												<div class="flex flex-row flex-1">
+													<Select.Root
+														type="single"
+														bind:value={selectedCategoryId}
+														onValueChange={(v) => {
+															showNewCategoryInput = v === 'new';
+														}}
+													>
+														<Select.Trigger class="w-full">
+															{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
+																(selectedCategoryId === 'new'
+																	? 'Add New Category...'
+																	: 'No Category')}
+														</Select.Trigger>
+														<Select.Content>
+															<Select.Item value="">No Category</Select.Item>
+															{#each data.categories as cat (cat.id)}
+																<Select.Item value={cat.id}>{cat.name}</Select.Item>
+															{/each}
+															<Select.Separator />
+															<Select.Item value="new">+ Add New Category...</Select.Item>
+														</Select.Content>
+														<input
+															type="hidden"
+															name="categoryId"
+															value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+														/>
+													</Select.Root>
+												</div>
 											{/if}
 											<Input
 												name="count"
@@ -756,16 +760,16 @@
 												min="1"
 												value="1"
 											/>
-											<Button
-												type="submit"
-												size="icon"
-												variant="outline"
-												class="shrink-0"
-												aria-label="Add item"
-											>
-												<Plus class="h-4 w-4" />
-											</Button>
 										</div>
+										<Button
+											type="submit"
+											size="icon"
+											variant="outline"
+											class="shrink-0"
+											aria-label="Add item"
+										>
+											<Plus class="h-4 w-4" />
+										</Button>
 									</div>
 								</form>
 
