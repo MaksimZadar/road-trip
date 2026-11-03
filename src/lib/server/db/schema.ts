@@ -81,7 +81,9 @@ export const roadTripStops = pgTable(
 		durationMinutes: integer('duration_minutes').default(0),
 		isLayover: boolean('is_layover').default(false),
 		arrivalTime: time('arrival_time', { withTimezone: false }),
-		departureTime: time('departure_time', { withTimezone: false })
+		departureTime: time('departure_time', { withTimezone: false }),
+		/** Set by the "We're here" check-in; null = not manually visited. */
+		visitedAt: timestamp('visited_at')
 	},
 	(t) => [primaryKey({ columns: [t.roadTripId, t.placeId] })]
 );
