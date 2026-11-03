@@ -171,11 +171,10 @@
 				bind:instance={mapInstance}
 			>
 				<TileLayer
-					url={'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
+					url={'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
 					options={{
-						subdomains: 'abcd',
 						maxZoom: 19,
-						attribution: '© OpenStreetMap contributors © CARTO'
+						attribution: '© OpenStreetMap contributors'
 					}}
 				/>
 
@@ -269,8 +268,8 @@
 
 <style>
 	.map-wrapper {
-		/* One-place tweak for the retro tint (starting point — needs visual review) */
-		--map-tile-filter: sepia(0.35) saturate(0.85) hue-rotate(-8deg) brightness(1.02) contrast(0.95);
+		/* One-place tweak for the retro tint (OSM tiles are more colourful than Positron) */
+		--map-tile-filter: sepia(0.3) saturate(0.8) hue-rotate(-10deg) brightness(1.02) contrast(0.95);
 		position: relative;
 		isolation: isolate;
 		width: 100%;
