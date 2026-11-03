@@ -673,7 +673,7 @@
 	<!-- Packing -->
 	<Tabs.Content value="packing" class="pb-24">
 		<div class="mx-auto w-full max-w-md px-4 py-6">
-			<Card.Root class="py-6">
+			<Card.Root>
 				<Card.Header>
 					<div class="flex items-start justify-between">
 						<div class="space-y-1.5">
