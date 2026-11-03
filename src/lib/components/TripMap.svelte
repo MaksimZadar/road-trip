@@ -290,7 +290,10 @@
 		font-family: inherit;
 	}
 
-	.map-wrapper :global(.leaflet-tile-pane) {
+	/* Apply per tile, NOT on the pane: leaflet.css sets `.leaflet-tile { filter: inherit }`,
+	   so a pane-level filter gets applied twice (once inherited, once on the pane) —
+	   which turned the dark map into featureless mush. Per-tile is single application. */
+	.map-wrapper :global(.leaflet-tile) {
 		filter: var(--map-tile-filter);
 	}
 
