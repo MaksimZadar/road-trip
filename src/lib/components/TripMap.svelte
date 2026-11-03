@@ -38,10 +38,23 @@
 		stopStatuses?: StopStatus[];
 		/** Per-leg flag (same order as `routes`). True = already driven. */
 		legDriven?: boolean[];
+		/** Whether the map is currently visible (it lives in a tab panel that is
+		 *  mounted hidden). When this flips true, Leaflet must re-measure its
+		 *  container — tab switches fire no resize event, so without this the map
+		 *  keeps the 0×0 grid it was initialized with. */
+		active?: boolean;
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
-	let { origin, destination, stops, routes, stopStatuses = [], legDriven = [] }: Props = $props();
+	let {
+		origin,
+		destination,
+		stops,
+		routes,
+		stopStatuses = [],
+		legDriven = [],
+		active = true
+	}: Props = $props();
 
 	let mapInstance: import('leaflet').Map | undefined = $state(undefined);
 
@@ -151,9 +164,18 @@
 		});
 	}
 
-	// Fit map to bounds when map instance is ready
+	// Fit map to bounds when the instance is ready AND the map is visible.
+	// Tab panels stay mounted but hidden (display:none), so the map initializes
+	// against a 0x0 container; invalidateSize() re-measures on first activation.
+	let hasFitted = false;
 	$effect(() => {
-		if (mapInstance) recenter();
+		if (mapInstance && active) {
+			mapInstance.invalidateSize();
+			if (!hasFitted) {
+				recenter();
+				hasFitted = true;
+			}
+		}
 	});
 </script>
 
