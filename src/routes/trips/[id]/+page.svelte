@@ -595,6 +595,7 @@
 				destination={data.trip.destination}
 				stops={data.trip.stops}
 				routes={data.routes}
+				active={activeTab === 'map'}
 				{stopStatuses}
 				{legDriven}
 			/>
