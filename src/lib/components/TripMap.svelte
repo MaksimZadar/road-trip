@@ -2,6 +2,9 @@
 	import { browser } from '$app/environment';
 	import { decodePolyline } from '$lib/utils/polyline';
 	import { Map, TileLayer, Marker, Popup, Polyline } from 'sveaflet';
+	import * as L from 'leaflet';
+	import LocateFixed from '@lucide/svelte/icons/locate-fixed';
+
 	interface Place {
 		id: string;
 		name: string;
@@ -24,45 +27,102 @@
 		polyline: string | null;
 	}
 
+	type StopStatus = 'done' | 'next' | 'upcoming';
+
 	interface Props {
 		origin: Place;
 		destination: Place;
 		stops: Stop[];
 		routes: (Route | null)[];
+		/** Per-stop status (same order as `stops`). Missing entries count as upcoming. */
+		stopStatuses?: StopStatus[];
+		/** Per-leg flag (same order as `routes`). True = already driven. */
+		legDriven?: boolean[];
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
-	let { origin, destination, stops, routes }: Props = $props();
+	let { origin, destination, stops, routes, stopStatuses = [], legDriven = [] }: Props = $props();
 
 	let mapInstance: import('leaflet').Map | undefined = $state(undefined);
-	let isFullscreen = $state(false);
-	let isCollapsed = $state(false);
+
+	// Palette (Leaflet html / polyline options can't use Tailwind classes)
+	const INK = 'var(--border)';
+	const PAPER = 'var(--card)';
+	const TEAL = 'var(--secondary)';
+	const TERRACOTTA = 'var(--primary)';
+	const MUSTARD = 'var(--accent)';
+	const CREAM = 'var(--background)';
 
 	function getDirectionsUrl(from: string, to: string) {
 		return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`;
 	}
 
-	function toggleFullscreen() {
-		if (!document.fullscreenElement) {
-			document.documentElement.requestFullscreen();
-			isFullscreen = true;
-		} else {
-			document.exitFullscreen();
-			isFullscreen = false;
-		}
+	function escapeHtml(value: string) {
+		return value
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
 	}
 
-	// Handle fullscreen change
-	$effect(() => {
-		const handler = () => {
-			isFullscreen = !!document.fullscreenElement;
-			if (mapInstance) {
-				setTimeout(() => mapInstance?.invalidateSize(), 100);
-			}
-		};
-		document.addEventListener('fullscreenchange', handler);
-		return () => document.removeEventListener('fullscreenchange', handler);
-	});
+	function labelChip(text: string, fontSize: number, extra = '') {
+		return `<div style="position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:${PAPER};color:${INK};border:2px solid ${INK};border-radius:8px;box-shadow:2px 2px 0 0 ${INK};padding:1px 6px;font-size:${fontSize}px;font-weight:700;line-height:1.3;${extra}">${escapeHtml(text)}</div>`;
+	}
+
+	function circlePin(size: number, inner: string, style: string, label: string, halo = '') {
+		return L.divIcon({
+			className: 'trip-pin',
+			iconSize: [size, size],
+			iconAnchor: [size / 2, size / 2],
+			popupAnchor: [0, -size / 2],
+			html: `<div style="position:relative;width:${size}px;height:${size}px;">${halo}<div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px;border:2px solid ${INK};box-shadow:3px 3px 0 0 ${INK};font-weight:700;${style}">${inner}</div>${label}</div>`
+		});
+	}
+
+	function originIcon() {
+		return circlePin(
+			28,
+			`<span style="width:8px;height:8px;border-radius:9999px;background:${PAPER};"></span>`,
+			`background:${TEAL};`,
+			labelChip("You're here", 10, 'text-transform:uppercase;letter-spacing:0.08em;')
+		);
+	}
+
+	function stopIcon(stop: Stop, status: StopStatus) {
+		const number = String(stop.order + 1);
+		if (status === 'next') {
+			const halo = `<div style="position:absolute;inset:0;border-radius:9999px;border:3px solid ${MUSTARD};opacity:0.5;transform:scale(1.6);"></div>`;
+			return circlePin(
+				36,
+				number,
+				`background:${MUSTARD};color:${INK};font-size:16px;`,
+				labelChip(stop.place.displayName, 11),
+				halo
+			);
+		}
+		if (status === 'done') {
+			return circlePin(28, '&#10003;', `background:${TEAL};color:${CREAM};font-size:14px;`, '');
+		}
+		return circlePin(28, number, `background:${PAPER};color:${INK};font-size:13px;`, '');
+	}
+
+	function destinationIcon() {
+		return circlePin(
+			30,
+			'&#9656;',
+			`background:${TERRACOTTA};color:${PAPER};font-size:14px;box-shadow:inset 0 0 0 3px ${PAPER},3px 3px 0 0 ${INK};`,
+			''
+		);
+	}
+
+	function popupHtml(kicker: string, name: string, link?: string) {
+		return `<div class="trip-popup"><div class="trip-popup-kicker">${escapeHtml(kicker)}</div><div class="trip-popup-name">${escapeHtml(name)}</div>${
+			link
+				? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="trip-popup-link">Get directions</a>`
+				: ''
+		}</div>`;
+	}
 
 	// Calculate all coordinates for bounds
 	function getAllCoordinates(): [number, number][] {
@@ -81,324 +141,219 @@
 		return coords;
 	}
 
+	function recenter() {
+		const coords = getAllCoordinates();
+		if (!mapInstance || coords.length === 0) return;
+		mapInstance.fitBounds(L.latLngBounds(coords), {
+			// Reserve space for the floating pill (top) and the next-stop sheet (bottom)
+			paddingTopLeft: [40, 70],
+			paddingBottomRight: [40, 260]
+		});
+	}
+
 	// Fit map to bounds when map instance is ready
 	$effect(() => {
-		if (mapInstance) {
-			const coords = getAllCoordinates();
-			if (coords.length > 0) {
-				const bounds = L.latLngBounds(coords);
-				mapInstance.fitBounds(bounds, { padding: [50, 50] });
-			}
-		}
+		if (mapInstance) recenter();
 	});
-
-	// Import L for bounds
-	import * as L from 'leaflet';
 </script>
 
-<div class="map-card" class:fullscreen={isFullscreen}>
-	<div class="map-header">
-		<div>
-			<h3 class="map-title">Trip Route</h3>
-			<p class="map-subtitle">Interactive map showing your journey</p>
-		</div>
-		<div class="map-actions">
-			<button
-				class="action-btn"
-				onclick={() => (isCollapsed = !isCollapsed)}
-				aria-label={isCollapsed ? 'Expand map' : 'Collapse map'}
+<div class="absolute inset-0">
+	<div class="map-wrapper">
+		{#if browser}
+			<Map
+				options={{
+					center:
+						origin.latitude && origin.longitude
+							? [origin.latitude, origin.longitude]
+							: [39.8283, -98.5795], // Center of USA
+					zoom: 4
+				}}
+				bind:instance={mapInstance}
 			>
-				{#if isCollapsed}
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M6 9l6 6 6-6" />
-					</svg>
-				{:else}
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M18 15l-6-6-6 6" />
-					</svg>
+				<TileLayer
+					url={'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
+					options={{
+						subdomains: 'abcd',
+						maxZoom: 19,
+						attribution: '© OpenStreetMap contributors © CARTO'
+					}}
+				/>
+
+				<!-- Route polylines (under the pins) -->
+				{#each routes as route, routeIndex (routeIndex)}
+					{#if route?.polyline}
+						{@const decodedCoords = decodePolyline(route.polyline)}
+						{@const driven = legDriven[routeIndex] === true}
+						{#if decodedCoords.length > 0}
+							<Polyline
+								latLngs={decodedCoords}
+								options={driven
+									? { color: '#1D5C58', weight: 5, opacity: 0.9, smoothFactor: 1 }
+									: {
+											color: '#B4492A',
+											weight: 4,
+											opacity: 0.85,
+											dashArray: '8 10',
+											smoothFactor: 1
+										}}
+							/>
+						{/if}
+					{/if}
+				{/each}
+
+				<!-- Origin marker -->
+				{#if origin.latitude && origin.longitude}
+					<Marker
+						latLng={[origin.latitude, origin.longitude]}
+						options={{ icon: originIcon(), zIndexOffset: 100, title: origin.displayName }}
+					/>
 				{/if}
-			</button>
-			<button class="action-btn" onclick={toggleFullscreen} aria-label="Toggle fullscreen">
-				{#if isFullscreen}
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path
-							d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
+
+				<!-- Stop markers -->
+				{#each stops as stop, index (stop.placeId)}
+					{#if stop.place.latitude && stop.place.longitude}
+						{@const fromPlace = index === 0 ? origin : stops[index - 1].place}
+						{@const status = stopStatuses[index] ?? 'upcoming'}
+						<Marker
+							latLng={[stop.place.latitude, stop.place.longitude]}
+							options={{
+								icon: stopIcon(stop, status),
+								zIndexOffset: status === 'next' ? 1000 : status === 'done' ? 150 : 200,
+								title: stop.place.displayName
+							}}
+						>
+							<Popup
+								options={{
+									content: popupHtml(
+										`Stop ${stop.order + 1}`,
+										stop.place.displayName,
+										getDirectionsUrl(fromPlace.displayName, stop.place.displayName)
+									)
+								}}
+							/>
+						</Marker>
+					{/if}
+				{/each}
+
+				<!-- Destination marker -->
+				{#if destination.latitude && destination.longitude}
+					{@const fromPlace = stops.length > 0 ? stops[stops.length - 1].place : origin}
+					<Marker
+						latLng={[destination.latitude, destination.longitude]}
+						options={{ icon: destinationIcon(), zIndexOffset: 300, title: destination.displayName }}
+					>
+						<Popup
+							options={{
+								content: popupHtml(
+									'Final destination',
+									destination.displayName,
+									getDirectionsUrl(fromPlace.displayName, destination.displayName)
+								)
+							}}
 						/>
-					</svg>
-				{:else}
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path
-							d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
-						/>
-					</svg>
+					</Marker>
 				{/if}
-			</button>
-		</div>
+			</Map>
+		{/if}
 	</div>
 
-	{#if !isCollapsed}
-		<div class="map-wrapper">
-			{#if browser}
-				<Map
-					options={{
-						center:
-							origin.latitude && origin.longitude
-								? [origin.latitude, origin.longitude]
-								: [39.8283, -98.5795], // Center of USA
-						zoom: 4
-					}}
-					bind:instance={mapInstance}
-				>
-					<TileLayer
-						url={'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-						options={{
-							maxZoom: 19,
-							attribution: '© OpenStreetMap contributors'
-						}}
-					/>
-
-					<!-- Origin marker -->
-					{#if origin.latitude && origin.longitude}
-						<Marker latLng={[origin.latitude, origin.longitude]}>
-							<Popup
-								options={{
-									content: `
-									<div class="marker-popup">
-										<strong>Starting Point</strong>
-										<p>${origin.displayName}</p>
-									</div>
-								`
-								}}
-							/>
-						</Marker>
-					{/if}
-
-					<!-- Stop markers -->
-					{#each stops as stop, index (stop.placeId)}
-						{#if stop.place.latitude && stop.place.longitude}
-							{@const fromPlace = index === 0 ? origin : stops[index - 1].place}
-							<Marker latLng={[stop.place.latitude, stop.place.longitude]}>
-								<Popup
-									options={{
-										content: `
-										<div class="marker-popup">
-											<strong>Stop ${index + 1}</strong>
-											<p>${stop.place.displayName}</p>
-											<a href="${getDirectionsUrl(fromPlace.displayName, stop.place.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
-												Get Directions
-											</a>
-										</div>
-									`
-									}}
-								/>
-							</Marker>
-						{/if}
-					{/each}
-
-					<!-- Destination marker -->
-					{#if destination.latitude && destination.longitude}
-						{@const fromPlace = stops.length > 0 ? stops[stops.length - 1].place : origin}
-						<Marker latLng={[destination.latitude, destination.longitude]}>
-							<Popup
-								options={{
-									content: `
-									<div class="marker-popup">
-										<strong>Final Destination</strong>
-										<p>${destination.displayName}</p>
-										<a href="${getDirectionsUrl(fromPlace.displayName, destination.displayName)}" target="_blank" rel="noopener noreferrer" class="directions-link">
-											Get Directions
-										</a>
-									</div>
-								`
-								}}
-							/>
-						</Marker>
-					{/if}
-
-					<!-- Route polylines -->
-					{#each routes as route, routeIndex (routeIndex)}
-						{#if route?.polyline}
-							{@const decodedCoords = decodePolyline(route.polyline)}
-							{#if decodedCoords.length > 0}
-								<Polyline
-									latLngs={decodedCoords}
-									options={{
-										color: '#3b82f6',
-										weight: 4,
-										opacity: 0.8,
-										smoothFactor: 1
-									}}
-								/>
-							{/if}
-						{/if}
-					{/each}
-				</Map>
-			{/if}
-		</div>
-	{/if}
+	<button
+		type="button"
+		onclick={recenter}
+		aria-label="Recenter map"
+		class="absolute top-3 right-3 z-20 flex size-11 items-center justify-center rounded-full border-2 border-border bg-card shadow-hard transition-transform active:translate-y-0.5"
+	>
+		<LocateFixed class="size-5 text-deep-teal" />
+	</button>
 </div>
 
 <style>
-	.map-card {
-		border: 1px solid hsl(var(--border));
-		border-radius: var(--radius);
-		background-color: hsl(var(--card));
-		overflow: hidden;
-		display: flex;
-		flex-direction: column;
+	.map-wrapper {
+		/* One-place tweak for the retro tint (starting point — needs visual review) */
+		--map-tile-filter: sepia(0.35) saturate(0.85) hue-rotate(-8deg) brightness(1.02) contrast(0.95);
+		position: relative;
+		isolation: isolate;
+		width: 100%;
 		height: 100%;
-		min-height: 400px;
+		background: var(--sand);
 	}
 
-	.map-card.fullscreen {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 9999;
-		border-radius: 0;
-		min-height: 100vh;
+	.map-wrapper :global(.leaflet-container) {
+		width: 100%;
+		height: 100%;
+		background: var(--sand);
+		font-family: inherit;
 	}
 
-	.map-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		padding: 1.5rem;
-		border-bottom: 1px solid hsl(var(--border));
+	.map-wrapper :global(.leaflet-tile-pane) {
+		filter: var(--map-tile-filter);
 	}
 
-	.map-title {
-		font-size: 1.125rem;
-		font-weight: 600;
-		margin: 0;
-		color: hsl(var(--card-foreground));
-	}
-
-	.map-subtitle {
-		font-size: 0.875rem;
-		color: hsl(var(--muted-foreground));
-		margin: 0.25rem 0 0 0;
-	}
-
-	.map-actions {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.action-btn {
+	.map-wrapper :global(.trip-pin) {
 		background: transparent;
 		border: none;
-		cursor: pointer;
-		padding: 0.5rem;
-		border-radius: var(--radius);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: hsl(var(--muted-foreground));
-		transition: all 0.2s;
+		overflow: visible;
 	}
 
-	.action-btn:hover {
-		background-color: hsl(var(--accent));
-		color: hsl(var(--accent-foreground));
+	.map-wrapper :global(.leaflet-control-attribution) {
+		background: var(--card);
+		color: var(--foreground);
+		border-top: 2px solid var(--border);
+		border-left: 2px solid var(--border);
+		border-top-left-radius: 8px;
 	}
 
-	.icon {
-		width: 1rem;
-		height: 1rem;
+	.map-wrapper :global(.leaflet-control-attribution a) {
+		color: var(--deep-teal);
 	}
 
-	.map-wrapper {
-		flex: 1;
-		min-height: 350px;
-		position: relative;
+	.map-wrapper :global(.leaflet-control-zoom) {
+		display: none;
 	}
 
-	.map-card.fullscreen .map-wrapper {
-		min-height: calc(100vh - 80px);
+	.map-wrapper :global(.leaflet-popup-content-wrapper) {
+		background: var(--card);
+		color: var(--foreground);
+		border: 2px solid var(--border);
+		border-radius: 10px;
+		box-shadow: 3px 3px 0 0 var(--border);
 	}
 
-	:global(.marker-popup) {
-		text-align: center;
-		min-width: 200px;
+	.map-wrapper :global(.leaflet-popup-content) {
+		margin: 10px 14px;
 	}
 
-	:global(.marker-popup strong) {
-		display: block;
-		margin-bottom: 0.5rem;
-		color: hsl(var(--foreground));
+	.map-wrapper :global(.leaflet-popup-tip) {
+		background: var(--card);
+		border: 2px solid var(--border);
+		box-shadow: none;
 	}
 
-	:global(.marker-popup p) {
-		margin: 0 0 0.5rem 0;
-		font-size: 0.875rem;
-		color: hsl(var(--muted-foreground));
+	.map-wrapper :global(.leaflet-popup-close-button) {
+		color: var(--foreground);
 	}
 
-	:global(.directions-link) {
+	.map-wrapper :global(.trip-popup-kicker) {
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		color: var(--muted-foreground);
+	}
+
+	.map-wrapper :global(.trip-popup-name) {
+		margin-top: 2px;
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--deep-teal);
+	}
+
+	.map-wrapper :global(.trip-popup-link) {
 		display: inline-block;
-		color: hsl(var(--primary));
-		text-decoration: none;
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
-
-	:global(.directions-link:hover) {
+		margin-top: 6px;
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
 		text-decoration: underline;
-	}
-
-	:global(.marker-pin) {
-		width: 30px;
-		height: 42px;
-		border-radius: 50% 50% 50% 0;
-		position: relative;
-		transform: rotate(-45deg);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-	}
-
-	:global(.origin-pin) {
-		background: #3b82f6;
-	}
-
-	:global(.origin-pin::after) {
-		content: '';
-		width: 10px;
-		height: 10px;
-		background: white;
-		border-radius: 50%;
-	}
-
-	:global(.stop-pin) {
-		background: #6b7280;
-		color: white;
-		font-size: 12px;
-		font-weight: bold;
-		transform: rotate(-45deg);
-	}
-
-	:global(.stop-pin span) {
-		transform: rotate(45deg);
-	}
-
-	:global(.destination-pin) {
-		background: #ef4444;
-	}
-
-	:global(.destination-pin::after) {
-		content: '';
-		width: 10px;
-		height: 10px;
-		background: white;
-		border-radius: 50%;
-	}
-
-	:global(.custom-marker) {
-		background: transparent !important;
-		border: none !important;
 	}
 </style>
