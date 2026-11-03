@@ -131,7 +131,7 @@ export const routeCacheRelations = relations(routeCache, ({ one }) => ({
 
 export const checklistItem = pgTable('check_list_item', {
 	id: uuid().primaryKey().defaultRandom(),
-	roadTripId: uuid('road_trip_id').references(() => roadTrip.id),
+	roadTripId: uuid('road_trip_id').references(() => roadTrip.id, { onDelete: 'cascade' }),
 	categoryId: uuid('category_id').references(() => category.id),
 	item: varchar({ length: 256 }).notNull(),
 	count: integer().default(1),
