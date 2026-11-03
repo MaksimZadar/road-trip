@@ -278,8 +278,9 @@
 	}
 
 	:global(.dark) .map-wrapper {
-		--map-tile-filter: invert(0.9) hue-rotate(180deg) sepia(0.2) saturate(0.35) brightness(0.85)
-			contrast(0.85);
+		/* Full invert + hue-rotate preserves hues (water stays blue) while flipping
+		   luminosity — the standard dark-map recipe. Partial invert muddies tiles. */
+		--map-tile-filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) sepia(0.2);
 	}
 
 	.map-wrapper :global(.leaflet-container) {
