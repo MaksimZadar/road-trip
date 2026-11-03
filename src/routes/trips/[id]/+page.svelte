@@ -658,7 +658,10 @@
 				<Card.Header>
 					<div class="flex items-start justify-between">
 						<div class="space-y-1.5">
-							<Card.Title>Road Trip Checklist</Card.Title>
+							<p class="text-xs font-bold tracking-[0.15em] text-primary uppercase">Packing</p>
+							<Card.Title class="font-heading text-2xl font-normal text-deep-teal">
+								Road Trip Checklist
+							</Card.Title>
 							<Card.Description>Don't forget the essentials for your journey.</Card.Description>
 						</div>
 						<Card.Action>
@@ -707,6 +710,8 @@
 													type="button"
 													size="icon"
 													variant="outline"
+													class="shrink-0"
+													aria-label="Back to category list"
 													onclick={() => {
 														showNewCategoryInput = false;
 														selectedCategoryId = '';
@@ -722,7 +727,7 @@
 														showNewCategoryInput = v === 'new';
 													}}
 												>
-													<Select.Trigger class="w-50">
+													<Select.Trigger class="w-full min-w-0 flex-1 sm:w-50 sm:flex-none">
 														{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
 															(selectedCategoryId === 'new'
 																? 'Add New Category...'
@@ -747,11 +752,17 @@
 												name="count"
 												type="number"
 												placeholder="Qty"
-												class="max-w-20 min-w-20"
+												class="w-20 shrink-0 text-center"
 												min="1"
 												value="1"
 											/>
-											<Button type="submit" size="icon" variant="outline">
+											<Button
+												type="submit"
+												size="icon"
+												variant="outline"
+												class="shrink-0"
+												aria-label="Add item"
+											>
 												<Plus class="h-4 w-4" />
 											</Button>
 										</div>
@@ -762,16 +773,20 @@
 									{#each itemsByCategory as group (group.id)}
 										<div class="space-y-3">
 											<div class="flex items-center gap-2 px-1">
-												<h4 class="text-sm font-semibold text-muted-foreground">{group.name}</h4>
+												<h4
+													class="text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase"
+												>
+													{group.name}
+												</h4>
 												{#if group.allChecked}
 													<Check class="h-4 w-4 text-primary" />
 												{/if}
 											</div>
 											<div class="space-y-2">
 												{#each group.items as item (item.id)}
-													<div class="flex flex-col rounded-lg border p-3">
-														<div class="flex items-center justify-between gap-2">
-															<div class="flex flex-1 items-center gap-3">
+													<div class="flex flex-col rounded-lg border-2 border-border bg-card p-3">
+														<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+															<div class="flex w-full items-center gap-3 sm:w-auto sm:flex-1">
 																<form action="?/toggleChecklistItem" method="POST" use:enhance>
 																	<input type="hidden" name="id" value={item.id} />
 																	<input type="hidden" name="checked" value={!item.checked} />
@@ -794,11 +809,12 @@
 																</span>
 															</div>
 
-															<div class="flex items-center gap-2">
+															<div class="flex min-w-0 flex-1 items-center sm:flex-none">
 																<form
 																	action="?/updateChecklistItemCategory"
 																	method="POST"
 																	use:enhance
+																	class="w-full"
 																>
 																	<input type="hidden" name="id" value={item.id} />
 																	<Select.Root
@@ -828,7 +844,7 @@
 																		}}
 																	>
 																		<Select.Trigger
-																			class="h-7 px-2 py-0 text-xs text-muted-foreground"
+																			class="h-11 w-full px-2 py-0 text-xs text-muted-foreground sm:w-auto"
 																		>
 																			{data.categories.find((c) => c.id === item.categoryId)
 																				?.name ?? 'No Category'}
@@ -852,7 +868,7 @@
 																		value={item.count}
 																		min="1"
 																		disabled={item.checked}
-																		class="h-8 w-16 text-center"
+																		class="h-11 w-16 text-center"
 																		onchange={(e) => {
 																			e.currentTarget.closest('form')?.requestSubmit();
 																		}}
@@ -866,6 +882,7 @@
 																		variant="ghost"
 																		size="icon"
 																		class="text-muted-foreground hover:text-destructive"
+																		aria-label="Delete item"
 																	>
 																		<Trash2 class="h-4 w-4" />
 																	</Button>
