@@ -9,8 +9,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Retro travel-journal theme — light (cream/ink) values.
-   Dark theme is a later variable swap in .dark; not built yet. */
+/* Retro travel-journal theme — light (cream/ink) values; .dark swaps to the night palette. */
 :root {
 	--radius: 0.875rem;
 	/* cream #F7EFDD */
@@ -68,37 +67,56 @@
 }
 
 .dark {
-	--background: oklch(0.13 0.028 261.692);
-	--foreground: oklch(0.985 0.002 247.839);
-	--card: oklch(0.21 0.034 264.665);
-	--card-foreground: oklch(0.985 0.002 247.839);
-	--popover: oklch(0.21 0.034 264.665);
-	--popover-foreground: oklch(0.985 0.002 247.839);
-	--primary: oklch(0.928 0.006 264.542);
-	--primary-foreground: oklch(0.21 0.034 264.665);
-	--secondary: oklch(0.278 0.033 256.848);
-	--secondary-foreground: oklch(0.985 0.002 247.839);
-	--muted: oklch(0.278 0.033 256.848);
-	--muted-foreground: oklch(0.707 0.022 261.325);
-	--accent: oklch(0.278 0.033 256.848);
-	--accent-foreground: oklch(0.985 0.002 247.839);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.551 0.027 264.364);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.21 0.034 264.665);
-	--sidebar-foreground: oklch(0.985 0.002 247.839);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-	--sidebar-accent: oklch(0.278 0.033 256.848);
-	--sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.551 0.027 264.364);
+	/* Night-poster palette: navy paper-at-night, same terracotta/mustard accents */
+	/* navy #0A1A25 — 15.5:1 with cream */
+	--background: oklch(0.21 0.03 240);
+	--foreground: oklch(0.954 0.025 86.9);
+	/* card #162733 — lighter navy, 13.3:1 with cream */
+	--card: oklch(0.265 0.032 240);
+	--card-foreground: oklch(0.954 0.025 86.9);
+	--popover: oklch(0.265 0.032 240);
+	--popover-foreground: oklch(0.954 0.025 86.9);
+	/* lightened terracotta #DD7955 — 5.0:1 as text on card, 5.8:1 on bg */
+	--primary: oklch(0.68 0.135 40);
+	/* navy ink on lightened terracotta — 5.9:1 (cream would be only 2.6:1) */
+	--primary-foreground: oklch(0.2 0.03 240);
+	/* teal brightened a touch #1F6763 — cream 5.8:1 */
+	--secondary: oklch(0.47 0.07 189);
+	--secondary-foreground: oklch(0.954 0.025 86.9);
+	/* muted #253541 / #A3BDC3 — 6.4:1 on muted, 7.7:1 on card */
+	--muted: oklch(0.32 0.03 240);
+	--muted-foreground: oklch(0.78 0.03 215);
+	--accent: oklch(0.772 0.146 80.1);
+	--accent-foreground: oklch(0.296 0.019 190.7);
+	/* brighter red #F66D67 — 5.3:1 on card */
+	--destructive: oklch(0.7 0.17 25);
+	/* solid cream-paper line: the "ink border" inverted */
+	--border: oklch(0.86 0.03 86);
+	--input: oklch(0.86 0.03 86);
+	--ring: oklch(0.65 0.09 189);
+	--chart-1: oklch(0.68 0.135 40);
+	--chart-2: oklch(0.65 0.1 184.7);
+	--chart-3: oklch(0.7 0.07 227);
+	--chart-4: oklch(0.828 0.189 84.4);
+	--chart-5: oklch(0.769 0.188 70.1);
+	--sidebar: oklch(0.265 0.032 240);
+	--sidebar-foreground: oklch(0.954 0.025 86.9);
+	--sidebar-primary: oklch(0.68 0.135 40);
+	--sidebar-primary-foreground: oklch(0.2 0.03 240);
+	--sidebar-accent: oklch(0.32 0.03 240);
+	--sidebar-accent-foreground: oklch(0.954 0.025 86.9);
+	--sidebar-border: oklch(0.86 0.03 86);
+	--sidebar-ring: oklch(0.65 0.09 189);
+	/* headings go cream-mustard #FADB90 — large slab text, ~11:1 on navy */
+	--deep-teal: oklch(0.9 0.1 88);
+	--mustard-light: oklch(0.847 0.132 85.3);
+	/* deep teal tint #083A3D — next-stop card, distinct from navy card; cream 10.9:1 */
+	--mustard-tint: oklch(0.32 0.05 200);
+	/* map land/water backdrops while tiles load */
+	--sand: oklch(0.28 0.02 240);
+	--sea: oklch(0.33 0.035 235);
+	/* warm grey #B8A98B — 6.6:1 on card */
+	--dashed-grey: oklch(0.74 0.045 85);
 }
 
 @theme inline {

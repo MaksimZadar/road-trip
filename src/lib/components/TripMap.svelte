@@ -187,7 +187,7 @@
 							<Polyline
 								latLngs={decodedCoords}
 								options={driven
-									? { color: '#1D5C58', weight: 5, opacity: 0.9, smoothFactor: 1 }
+									? { color: '#3FA39B', weight: 5, opacity: 0.9, smoothFactor: 1 }
 									: {
 											color: '#B4492A',
 											weight: 4,
@@ -275,6 +275,11 @@
 		width: 100%;
 		height: 100%;
 		background: var(--sand);
+	}
+
+	:global(.dark) .map-wrapper {
+		--map-tile-filter: invert(0.9) hue-rotate(180deg) sepia(0.2) saturate(0.35) brightness(0.85)
+			contrast(0.85);
 	}
 
 	.map-wrapper :global(.leaflet-container) {
