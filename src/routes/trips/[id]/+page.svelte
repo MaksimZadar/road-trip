@@ -347,12 +347,7 @@
 					</form>
 				{/if}
 				<form action="?/delete" method="POST" use:enhance>
-					<Button
-						type="submit"
-						variant="outline"
-						size="sm"
-						class="text-destructive hover:bg-destructive hover:text-destructive"
-					>
+					<Button type="submit" variant="outline" size="sm" class="text-destructive">
 						<Trash class="size-4" aria-hidden="true" />
 						Delete Trip
 					</Button>
