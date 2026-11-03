@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
@@ -12,6 +13,7 @@
 		eta,
 		distance,
 		goHref,
+		actions,
 		class: className
 	}: {
 		stopName: string;
@@ -20,6 +22,8 @@
 		eta: string | null;
 		distance: string | null;
 		goHref: string | null;
+		/** Extra buttons rendered beside "Go" (e.g. a check-in form). */
+		actions?: Snippet;
 		class?: string;
 	} = $props();
 </script>
@@ -72,11 +76,14 @@
 				<div class="font-heading text-2xl text-mustard-light">{distance ?? '—'}</div>
 			</div>
 		</div>
-		{#if goHref}
-			<Button variant="highlight" href={goHref} target="_blank" rel="noopener noreferrer">
-				<Navigation aria-hidden="true" />
-				Go
-			</Button>
-		{/if}
+		<div class="flex items-center gap-2">
+			{#if goHref}
+				<Button variant="highlight" href={goHref} target="_blank" rel="noopener noreferrer">
+					<Navigation aria-hidden="true" />
+					Go
+				</Button>
+			{/if}
+			{@render actions?.()}
+		</div>
 	</div>
 </section>

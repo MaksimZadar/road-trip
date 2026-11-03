@@ -2,10 +2,12 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { enhance } from '$app/forms';
-	import { ChevronLeft, Trash2, Route, Plus, Check, CloudSun, Pencil } from '@lucide/svelte';
+	import { ChevronLeft, Trash2, Route, Plus, Check, CloudSun, Pencil, Trash } from '@lucide/svelte';
 	import Backpack from '@lucide/svelte/icons/backpack';
 	import ListOrdered from '@lucide/svelte/icons/list-ordered';
 	import MapIcon from '@lucide/svelte/icons/map';
+	import MapPinCheckInside from '@lucide/svelte/icons/map-pin-check-inside';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Navigation from '@lucide/svelte/icons/navigation';
 	import StatBlock from '$lib/components/trip/StatBlock.svelte';
@@ -156,7 +158,6 @@
 	});
 
 	const tripIsPast = $derived(tripStart.getTime() + 24 * 60 * 60 * 1000 < nowMs);
-	const tripNotStarted = $derived(tripStart.getTime() > nowMs);
 
 	function arrivalDateTimeFor(index: number): Date | null {
 		const timelineEntry = data.timeline?.[index];
@@ -172,13 +173,13 @@
 		if (tripIsPast) {
 			return stops.map(() => 'done' as const);
 		}
-		if (tripNotStarted) {
-			return stops.map((_, i) => (i === 0 ? ('next' as const) : ('upcoming' as const)));
-		}
 		let nextAssigned = false;
-		return stops.map((_, i) => {
+		return stops.map((stop, i) => {
+			// Manually checked in ("We're here"), or the calculated arrival already passed
 			const arrival = arrivalDateTimeFor(i);
-			if (arrival !== null && arrival.getTime() < nowMs) return 'done' as const;
+			if (stop.visitedAt != null || (arrival !== null && arrival.getTime() < nowMs)) {
+				return 'done' as const;
+			}
 			if (!nextAssigned) {
 				nextAssigned = true;
 				return 'next' as const;
@@ -350,9 +351,9 @@
 						type="submit"
 						variant="outline"
 						size="sm"
-						class="hover:text-destructive-foreground text-destructive hover:bg-destructive"
+						class="text-destructive hover:bg-destructive hover:text-destructive"
 					>
-						<Trash2 class="size-4" aria-hidden="true" />
+						<Trash class="size-4" aria-hidden="true" />
 						Delete Trip
 					</Button>
 				</form>
@@ -369,7 +370,19 @@
 					goHref={heroPrevPlace
 						? getDirectionsUrl(heroPrevPlace, heroStop.place.displayName)
 						: null}
-				/>
+				>
+					{#snippet actions()}
+						{#if stopStatuses[heroStopIndex] !== 'done'}
+							<form action="?/checkInStop" method="POST" use:enhance>
+								<input type="hidden" name="placeId" value={heroStop.placeId} />
+								<Button type="submit" variant="outline" size="lg">
+									<MapPinCheckInside aria-hidden="true" />
+									We're here
+								</Button>
+							</form>
+						{/if}
+					{/snippet}
+				</NextStopHero>
 			{/if}
 
 			<p class="mt-8 mb-3 text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">
@@ -535,6 +548,28 @@
 											({formatDurationMinutes(timelineEntry.durationMinutes)})
 										</span>
 									</p>
+								{/if}
+								{#if stopStatuses[i] !== 'done'}
+									<form action="?/checkInStop" method="POST" use:enhance>
+										<input type="hidden" name="placeId" value={stop.placeId} />
+										<Button type="submit" size="sm" variant="outline">
+											<MapPinCheckInside class="size-4" aria-hidden="true" />
+											We're here
+										</Button>
+									</form>
+								{:else if stop.visitedAt != null}
+									<form action="?/undoCheckIn" method="POST" use:enhance>
+										<input type="hidden" name="placeId" value={stop.placeId} />
+										<Button
+											type="submit"
+											variant="ghost"
+											size="icon-sm"
+											class="size-9"
+											aria-label="Undo check-in"
+										>
+											<RotateCcw class="size-4" aria-hidden="true" />
+										</Button>
+									</form>
 								{/if}
 								<Button
 									variant="ghost"

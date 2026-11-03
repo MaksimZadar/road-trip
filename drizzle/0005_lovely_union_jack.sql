@@ -1,0 +1,1 @@
+ALTER TABLE "road_trip_stops" ADD COLUMN "visited_at" timestamp;

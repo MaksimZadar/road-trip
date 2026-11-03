@@ -3,7 +3,7 @@ import * as schema from '$lib/server/db/schema';
 import { getWeatherForTrip, deleteCachedWeatherForTrip } from '$lib/server/services/weather';
 import { isWeatherForecastAvailable } from '$lib/utils/weather';
 import { error, redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lte } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -438,6 +438,49 @@ export const actions: Actions = {
 				isLayover
 			})
 			.where(eq(schema.roadTripStops.placeId, placeId));
+
+		return { success: true };
+	},
+	checkInStop: async ({ params, request }) => {
+		const formData = await request.formData();
+		const placeId = formData.get('placeId') as string;
+		if (!placeId) return { success: false };
+
+		const target = await db.query.roadTripStops.findFirst({
+			where: (stops, { and, eq }) =>
+				and(eq(stops.roadTripId, params.id), eq(stops.placeId, placeId))
+		});
+		if (!target) return { success: false };
+
+		// "We're here" at this stop means we already drove through every earlier one:
+		// mark this stop and all before it as visited (only those not already visited).
+		await db
+			.update(schema.roadTripStops)
+			.set({ visitedAt: new Date() })
+			.where(
+				and(
+					eq(schema.roadTripStops.roadTripId, params.id),
+					lte(schema.roadTripStops.order, target.order),
+					isNull(schema.roadTripStops.visitedAt)
+				)
+			);
+
+		return { success: true };
+	},
+	undoCheckIn: async ({ params, request }) => {
+		const formData = await request.formData();
+		const placeId = formData.get('placeId') as string;
+		if (!placeId) return { success: false };
+
+		await db
+			.update(schema.roadTripStops)
+			.set({ visitedAt: null })
+			.where(
+				and(
+					eq(schema.roadTripStops.roadTripId, params.id),
+					eq(schema.roadTripStops.placeId, placeId)
+				)
+			);
 
 		return { success: true };
 	}
