@@ -2,17 +2,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { enhance } from '$app/forms';
-	import {
-		ChevronLeft,
-		Trash2,
-		Route,
-		Plus,
-		Check,
-		ChevronDown,
-		ChevronUp,
-		CloudSun,
-		Pencil
-	} from '@lucide/svelte';
+	import { ChevronLeft, Trash2, Route, Plus, Check, CloudSun, Pencil } from '@lucide/svelte';
 	import Backpack from '@lucide/svelte/icons/backpack';
 	import ListOrdered from '@lucide/svelte/icons/list-ordered';
 	import MapIcon from '@lucide/svelte/icons/map';
@@ -24,7 +14,6 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { DateFormatter } from '@internationalized/date';
-	import { slide } from 'svelte/transition';
 	import { SvelteMap } from 'svelte/reactivity';
 	import WeatherCard from '$lib/components/WeatherCard.svelte';
 	import TripMap from '$lib/components/TripMap.svelte';
@@ -35,7 +24,6 @@
 	let { data } = $props();
 
 	let activeTab = $state('itinerary');
-	let isChecklistCollapsed = $state(false);
 	let showNewCategoryInput = $state(false);
 	let selectedCategoryId = $state('');
 	let editingOriginTime = $state(false);
@@ -664,249 +652,225 @@
 							</Card.Title>
 							<Card.Description>Don't forget the essentials for your journey.</Card.Description>
 						</div>
-						<Card.Action>
-							<Button
-								variant="ghost"
-								size="icon"
-								onclick={() => (isChecklistCollapsed = !isChecklistCollapsed)}
-								aria-label={isChecklistCollapsed ? 'Expand checklist' : 'Collapse checklist'}
-							>
-								{#if isChecklistCollapsed}
-									<ChevronDown class="h-4 w-4" />
-								{:else}
-									<ChevronUp class="h-4 w-4" />
-								{/if}
-							</Button>
-						</Card.Action>
 					</div>
 				</Card.Header>
-				{#if !isChecklistCollapsed}
-					<div transition:slide>
-						<Card.Content>
-							<div class="space-y-4">
-								<form
-									action="?/addChecklistItem"
-									method="POST"
-									use:enhance={() => {
-										return async ({ update }) => {
-											await update();
-											showNewCategoryInput = false;
-											selectedCategoryId = '';
-										};
-									}}
-									class="space-y-2"
-								>
-									<div class="flex flex-1 flex-row items-center justify-center gap-4 align-middle">
-										<div class="flex flex-1 flex-col flex-wrap gap-2">
-											<Input name="item" placeholder="Add new item..." required class="flex-2" />
-											{#if showNewCategoryInput}
-												<div class="flex flex-4 flex-row gap-2">
-													<Input
-														name="newCategory"
-														placeholder="New category name..."
-														required
-														class="flex-1"
-													/>
-													<Button
-														type="button"
-														size="icon"
-														variant="outline"
-														class="shrink-0"
-														aria-label="Back to category list"
-														onclick={() => {
-															showNewCategoryInput = false;
-															selectedCategoryId = '';
-														}}
-													>
-														<ChevronLeft class="h-4 w-4" />
-													</Button>
-												</div>
-											{:else}
-												<div class="flex flex-row flex-1">
-													<Select.Root
-														type="single"
-														bind:value={selectedCategoryId}
-														onValueChange={(v) => {
-															showNewCategoryInput = v === 'new';
-														}}
-													>
-														<Select.Trigger class="w-full">
-															{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
-																(selectedCategoryId === 'new'
-																	? 'Add New Category...'
-																	: 'No Category')}
-														</Select.Trigger>
-														<Select.Content>
-															<Select.Item value="">No Category</Select.Item>
-															{#each data.categories as cat (cat.id)}
-																<Select.Item value={cat.id}>{cat.name}</Select.Item>
-															{/each}
-															<Select.Separator />
-															<Select.Item value="new">+ Add New Category...</Select.Item>
-														</Select.Content>
-														<input
-															type="hidden"
-															name="categoryId"
-															value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
-														/>
-													</Select.Root>
-												</div>
-											{/if}
+				<Card.Content>
+					<div class="space-y-4">
+						<form
+							action="?/addChecklistItem"
+							method="POST"
+							use:enhance={() => {
+								return async ({ update }) => {
+									await update();
+									showNewCategoryInput = false;
+									selectedCategoryId = '';
+								};
+							}}
+							class="space-y-2"
+						>
+							<div class="flex flex-1 flex-row items-center justify-center gap-4 align-middle">
+								<div class="flex flex-1 flex-col flex-wrap gap-2">
+									<Input name="item" placeholder="Add new item..." required class="flex-2" />
+									{#if showNewCategoryInput}
+										<div class="flex flex-4 flex-row gap-2">
 											<Input
-												name="count"
-												type="number"
-												placeholder="Qty"
-												class="w-20 shrink-0 text-center"
-												min="1"
-												value="1"
+												name="newCategory"
+												placeholder="New category name..."
+												required
+												class="flex-1"
 											/>
-										</div>
-										<Button
-											type="submit"
-											size="icon"
-											variant="outline"
-											class="shrink-0"
-											aria-label="Add item"
-										>
-											<Plus class="h-4 w-4" />
-										</Button>
-									</div>
-								</form>
-
-								<div class="space-y-6">
-									{#each itemsByCategory as group (group.id)}
-										<div class="space-y-3">
-											<div class="flex items-center gap-2 px-1">
-												<h4
-													class="text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase"
-												>
-													{group.name}
-												</h4>
-												{#if group.allChecked}
-													<Check class="h-4 w-4 text-primary" />
-												{/if}
-											</div>
-											<div class="space-y-2">
-												{#each group.items as item (item.id)}
-													<div class="flex flex-col rounded-lg border-2 border-border bg-card p-3">
-														<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-															<div class="flex w-full items-center gap-3 sm:w-auto sm:flex-1">
-																<form action="?/toggleChecklistItem" method="POST" use:enhance>
-																	<input type="hidden" name="id" value={item.id} />
-																	<input type="hidden" name="checked" value={!item.checked} />
-																	<Checkbox
-																		checked={item.checked ?? false}
-																		onCheckedChange={() => {
-																			const form = document
-																				.querySelector(
-																					`form[action="?/toggleChecklistItem"] input[name="id"][value="${item.id}"]`
-																				)
-																				?.closest('form');
-																			if (form) form.requestSubmit();
-																		}}
-																	/>
-																</form>
-																<span
-																	class={item.checked ? 'text-muted-foreground line-through' : ''}
-																>
-																	{item.item}
-																</span>
-															</div>
-
-															<div class="flex min-w-0 flex-1 items-center sm:flex-none">
-																<form
-																	action="?/updateChecklistItemCategory"
-																	method="POST"
-																	use:enhance
-																	class="w-full"
-																>
-																	<input type="hidden" name="id" value={item.id} />
-																	<Select.Root
-																		type="single"
-																		disabled={item.checked ?? false}
-																		value={item.categoryId ?? ''}
-																		onValueChange={(v) => {
-																			const form = document
-																				.querySelector(
-																					`form[action="?/updateChecklistItemCategory"] input[name="id"][value="${item.id}"]`
-																				)
-																				?.closest('form');
-																			if (form) {
-																				// Create a temporary hidden input for the categoryId since Select doesn't use a real select
-																				let input = form.querySelector(
-																					'input[name="categoryId"]'
-																				) as HTMLInputElement;
-																				if (!input) {
-																					input = document.createElement('input');
-																					input.type = 'hidden';
-																					input.name = 'categoryId';
-																					form.appendChild(input);
-																				}
-																				input.value = v;
-																				form.requestSubmit();
-																			}
-																		}}
-																	>
-																		<Select.Trigger
-																			class="h-11 w-full px-2 py-0 text-xs text-muted-foreground sm:w-auto"
-																		>
-																			{data.categories.find((c) => c.id === item.categoryId)
-																				?.name ?? 'No Category'}
-																		</Select.Trigger>
-																		<Select.Content>
-																			<Select.Item value="">No Category</Select.Item>
-																			{#each data.categories as cat (cat.id)}
-																				<Select.Item value={cat.id}>{cat.name}</Select.Item>
-																			{/each}
-																		</Select.Content>
-																	</Select.Root>
-																</form>
-															</div>
-
-															<div class="flex items-center gap-2">
-																<form action="?/updateChecklistItemCount" method="POST" use:enhance>
-																	<input type="hidden" name="id" value={item.id} />
-																	<Input
-																		name="count"
-																		type="number"
-																		value={item.count}
-																		min="1"
-																		disabled={item.checked}
-																		class="h-11 w-16 text-center"
-																		onchange={(e) => {
-																			e.currentTarget.closest('form')?.requestSubmit();
-																		}}
-																	/>
-																</form>
-
-																<form action="?/deleteChecklistItem" method="POST" use:enhance>
-																	<input type="hidden" name="id" value={item.id} />
-																	<Button
-																		type="submit"
-																		variant="ghost"
-																		size="icon"
-																		class="text-muted-foreground hover:text-destructive"
-																		aria-label="Delete item"
-																	>
-																		<Trash2 class="h-4 w-4" />
-																	</Button>
-																</form>
-															</div>
-														</div>
-													</div>
-												{/each}
-											</div>
+											<Button
+												type="button"
+												size="icon"
+												variant="outline"
+												class="shrink-0"
+												aria-label="Back to category list"
+												onclick={() => {
+													showNewCategoryInput = false;
+													selectedCategoryId = '';
+												}}
+											>
+												<ChevronLeft class="h-4 w-4" />
+											</Button>
 										</div>
 									{:else}
-										<p class="py-4 text-center text-sm text-muted-foreground">
-											No items in your checklist.
-										</p>
-									{/each}
+										<div class="flex flex-1 flex-row">
+											<Select.Root
+												type="single"
+												bind:value={selectedCategoryId}
+												onValueChange={(v) => {
+													showNewCategoryInput = v === 'new';
+												}}
+											>
+												<Select.Trigger class="w-full">
+													{data.categories.find((c) => c.id === selectedCategoryId)?.name ??
+														(selectedCategoryId === 'new' ? 'Add New Category...' : 'No Category')}
+												</Select.Trigger>
+												<Select.Content>
+													<Select.Item value="">No Category</Select.Item>
+													{#each data.categories as cat (cat.id)}
+														<Select.Item value={cat.id}>{cat.name}</Select.Item>
+													{/each}
+													<Select.Separator />
+													<Select.Item value="new">+ Add New Category...</Select.Item>
+												</Select.Content>
+												<input
+													type="hidden"
+													name="categoryId"
+													value={selectedCategoryId === 'new' ? '' : selectedCategoryId}
+												/>
+											</Select.Root>
+										</div>
+									{/if}
+									<Input
+										name="count"
+										type="number"
+										placeholder="Qty"
+										class="w-20 shrink-0 text-center"
+										min="1"
+										value="1"
+									/>
 								</div>
+								<Button
+									type="submit"
+									size="icon"
+									variant="outline"
+									class="shrink-0"
+									aria-label="Add item"
+								>
+									<Plus class="h-4 w-4" />
+								</Button>
 							</div>
-						</Card.Content>
+						</form>
+
+						<div class="space-y-6">
+							{#each itemsByCategory as group (group.id)}
+								<div class="space-y-3">
+									<div class="flex items-center gap-2 px-1">
+										<h4 class="text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase">
+											{group.name}
+										</h4>
+										{#if group.allChecked}
+											<Check class="h-4 w-4 text-primary" />
+										{/if}
+									</div>
+									<div class="space-y-2">
+										{#each group.items as item (item.id)}
+											<div class="flex flex-col rounded-lg border-2 border-border bg-card p-3">
+												<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+													<div class="flex w-full items-center gap-3 sm:w-auto sm:flex-1">
+														<form action="?/toggleChecklistItem" method="POST" use:enhance>
+															<input type="hidden" name="id" value={item.id} />
+															<input type="hidden" name="checked" value={!item.checked} />
+															<Checkbox
+																checked={item.checked ?? false}
+																onCheckedChange={() => {
+																	const form = document
+																		.querySelector(
+																			`form[action="?/toggleChecklistItem"] input[name="id"][value="${item.id}"]`
+																		)
+																		?.closest('form');
+																	if (form) form.requestSubmit();
+																}}
+															/>
+														</form>
+														<span class={item.checked ? 'text-muted-foreground line-through' : ''}>
+															{item.item}
+														</span>
+													</div>
+
+													<div class="flex min-w-0 flex-1 items-center sm:flex-none">
+														<form
+															action="?/updateChecklistItemCategory"
+															method="POST"
+															use:enhance
+															class="w-full"
+														>
+															<input type="hidden" name="id" value={item.id} />
+															<Select.Root
+																type="single"
+																disabled={item.checked ?? false}
+																value={item.categoryId ?? ''}
+																onValueChange={(v) => {
+																	const form = document
+																		.querySelector(
+																			`form[action="?/updateChecklistItemCategory"] input[name="id"][value="${item.id}"]`
+																		)
+																		?.closest('form');
+																	if (form) {
+																		// Create a temporary hidden input for the categoryId since Select doesn't use a real select
+																		let input = form.querySelector(
+																			'input[name="categoryId"]'
+																		) as HTMLInputElement;
+																		if (!input) {
+																			input = document.createElement('input');
+																			input.type = 'hidden';
+																			input.name = 'categoryId';
+																			form.appendChild(input);
+																		}
+																		input.value = v;
+																		form.requestSubmit();
+																	}
+																}}
+															>
+																<Select.Trigger
+																	class="h-11 w-full px-2 py-0 text-xs text-muted-foreground sm:w-auto"
+																>
+																	{data.categories.find((c) => c.id === item.categoryId)?.name ??
+																		'No Category'}
+																</Select.Trigger>
+																<Select.Content>
+																	<Select.Item value="">No Category</Select.Item>
+																	{#each data.categories as cat (cat.id)}
+																		<Select.Item value={cat.id}>{cat.name}</Select.Item>
+																	{/each}
+																</Select.Content>
+															</Select.Root>
+														</form>
+													</div>
+
+													<div class="flex items-center gap-2">
+														<form action="?/updateChecklistItemCount" method="POST" use:enhance>
+															<input type="hidden" name="id" value={item.id} />
+															<Input
+																name="count"
+																type="number"
+																value={item.count}
+																min="1"
+																disabled={item.checked}
+																class="h-11 w-16 text-center"
+																onchange={(e) => {
+																	e.currentTarget.closest('form')?.requestSubmit();
+																}}
+															/>
+														</form>
+
+														<form action="?/deleteChecklistItem" method="POST" use:enhance>
+															<input type="hidden" name="id" value={item.id} />
+															<Button
+																type="submit"
+																variant="ghost"
+																size="icon"
+																class="text-muted-foreground hover:text-destructive"
+																aria-label="Delete item"
+															>
+																<Trash2 class="h-4 w-4" />
+															</Button>
+														</form>
+													</div>
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{:else}
+								<p class="py-4 text-center text-sm text-muted-foreground">
+									No items in your checklist.
+								</p>
+							{/each}
+						</div>
 					</div>
-				{/if}
+				</Card.Content>
 			</Card.Root>
 		</div>
 	</Tabs.Content>
