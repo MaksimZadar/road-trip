@@ -17,6 +17,8 @@
 	import ListOrdered from '@lucide/svelte/icons/list-ordered';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Wallet from '@lucide/svelte/icons/wallet';
+	import Navigation from '@lucide/svelte/icons/navigation';
+	import StatBlock from '$lib/components/trip/StatBlock.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -260,6 +262,37 @@
 		return finalArrivalMs !== null && finalArrivalMs < nowMs
 			? ('done' as const)
 			: ('next' as const);
+	});
+
+	const legDriven: boolean[] = $derived(
+		data.routes.map((_, i) =>
+			i < data.trip.stops.length ? stopStatuses[i] === 'done' : destinationStatus === 'done'
+		)
+	);
+
+	const mapSheet = $derived.by(() => {
+		if (heroStop) {
+			return {
+				kicker: `Next stop · ${heroStop.isLayover ? 'Overnight' : 'Stop'}`,
+				name: heroStop.place.displayName,
+				arrive: data.timeline?.[heroStopIndex]?.arrivalTime ?? '—',
+				drive: formatDuration(heroLeg?.durationSeconds ?? null) || '—',
+				distance: formatDistance(heroLeg?.distanceMeters ?? null) || '—',
+				url: getDirectionsUrl(
+					heroPrevPlace ?? data.trip.origin.displayName,
+					heroStop.place.displayName
+				)
+			};
+		}
+		const lastLeg = data.routes[data.routes.length - 1] ?? null;
+		return {
+			kicker: 'Final destination',
+			name: data.trip.destination.displayName,
+			arrive: finalArrivalTime ?? '—',
+			drive: formatDuration(lastLeg?.durationSeconds ?? null) || '—',
+			distance: formatDistance(lastLeg?.distanceMeters ?? null) || '—',
+			url: getDirectionsUrl(finalPrevPlace, data.trip.destination.displayName)
+		};
 	});
 
 	const finalLegDistanceLabel: string | null = $derived.by(() => {
@@ -568,12 +601,54 @@
 		value="map"
 		class="-mx-4 h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] w-full overflow-hidden sm:-mx-6 lg:-mx-8"
 	>
-		<TripMap
-			origin={data.trip.origin}
-			destination={data.trip.destination}
-			stops={data.trip.stops}
-			routes={data.routes}
-		/>
+		<div class="relative h-full w-full">
+			<TripMap
+				origin={data.trip.origin}
+				destination={data.trip.destination}
+				stops={data.trip.stops}
+				routes={data.routes}
+				{stopStatuses}
+				{legDriven}
+			/>
+
+			<div
+				class="absolute top-3 left-3 z-20 max-w-[55vw] rounded-full border-2 border-border bg-card px-3 py-1.5 text-xs font-bold tracking-[0.1em] text-foreground uppercase shadow-hard"
+			>
+				<span class="block truncate">
+					{pillDateFormatter.format(new Date(data.trip.plannedDate))} · {data.trip.title}
+				</span>
+			</div>
+
+			<div
+				class="absolute inset-x-0 bottom-0 z-20 rounded-t-[26px] border-x-2 border-t-2 border-border bg-card shadow-hard"
+			>
+				<div class="mx-auto max-w-md px-4 pt-3 pb-4">
+					<div class="mx-auto mb-3 h-1 w-10 rounded-full bg-dashed-grey" aria-hidden="true"></div>
+					{#if mapSheet}
+						<p class="text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">
+							{mapSheet.kicker}
+						</p>
+						<h2 class="font-heading text-2xl text-deep-teal">{mapSheet.name}</h2>
+						<div
+							class="mt-3 flex divide-x-2 divide-dashed divide-dashed-grey [&>*]:flex-1 [&>*]:px-3 [&>*:first-child]:pl-0 [&>*:last-child]:pr-0"
+						>
+							<StatBlock label="Arrive" value={mapSheet.arrive} />
+							<StatBlock label="Drive" value={mapSheet.drive} />
+							<StatBlock label="Distance" value={mapSheet.distance} />
+						</div>
+						<Button
+							href={mapSheet.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="mt-4 h-12 w-full text-base font-bold"
+						>
+							<Navigation class="size-5" />
+							Start navigation
+						</Button>
+					{/if}
+				</div>
+			</div>
+		</div>
 	</Tabs.Content>
 
 	<!-- Packing -->
