@@ -132,7 +132,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			const [arrHours, arrMins] = arrivalTimeRaw.split(':').map(Number);
 			const [depHours, depMins] = stop.departureTime.split(':').map(Number);
 
-			let arrMinutes = arrHours * 60 + arrMins;
+			const arrMinutes = arrHours * 60 + arrMins;
 			let depMinutes = depHours * 60 + depMins;
 
 			// Handle overnight
@@ -418,7 +418,7 @@ export const actions: Actions = {
 			const [arrHours, arrMins] = arrivalTime.split(':').map(Number);
 			const [depHours, depMins] = departureTime.split(':').map(Number);
 
-			let arrMinutes = arrHours * 60 + arrMins;
+			const arrMinutes = arrHours * 60 + arrMins;
 			let depMinutes = depHours * 60 + depMins;
 
 			// Handle overnight (departure is on next day)
