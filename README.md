@@ -65,6 +65,8 @@ You can also run the entire application using Docker Compose:
 docker compose up -d
 ```
 
+Compose reads `OPENROUTE_API_KEY` from your shell or from a `.env` file next to `compose.yaml`, so set it there before starting (e.g. `OPENROUTE_API_KEY=your_api_key_here`). Do not commit real keys.
+
 The app will be available at [http://localhost:3000](http://localhost:3000).
 
 ## 📄 License
