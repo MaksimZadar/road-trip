@@ -50,6 +50,13 @@
       "when": 1793683486683,
       "tag": "0006_reflective_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794627099872,
+      "tag": "0007_motionless_expediter",
+      "breakpoints": true
     }
   ]
 }
