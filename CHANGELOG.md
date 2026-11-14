@@ -1,3 +1,20 @@
+# [0.8.0](https://github.com/MaksimZadar/road-trip/compare/v0.7.0...v0.8.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* wrap poi chips so none are cut off ([2a3fdd6](https://github.com/MaksimZadar/road-trip/commit/2a3fdd676ce1b2339f38d25b79a4a6e21dc0cf3e))
+
+
+### Features
+
+* add fuel range planner backend ([2b59a58](https://github.com/MaksimZadar/road-trip/commit/2b59a5807239e53338eb8b092e994f4f0c9bef23))
+* add POI schema and OpenTripMap service ([1b0cf17](https://github.com/MaksimZadar/road-trip/commit/1b0cf17f752bf34fd7dc658b2b887d2278e096fa))
+* add range settings and refuel warnings ([3cd94e4](https://github.com/MaksimZadar/road-trip/commit/3cd94e47c760a123729a64e34e515c3f967a0ee5))
+* add stop detail routes and pin actions ([ff37515](https://github.com/MaksimZadar/road-trip/commit/ff3751527b8f75e8c7e8f4b43b92a24c3d4e3414))
+* add things-to-do stop page UI ([4f2b433](https://github.com/MaksimZadar/road-trip/commit/4f2b433ca48f0977c3139e8c1e39ba21cdc3d0b7))
+* show pins on map and timeline ([fcdf184](https://github.com/MaksimZadar/road-trip/commit/fcdf1849e37aa1a67677d071deb172f5eb860f92))
+
 # [0.7.0](https://github.com/MaksimZadar/road-trip/compare/v0.6.0...v0.7.0) (2026-11-14)
 
 
