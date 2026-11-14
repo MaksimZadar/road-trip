@@ -28,7 +28,11 @@ export const roadTrip = pgTable('road_trip', {
 		.notNull(),
 	destinationId: uuid('destination_id')
 		.references(() => places.id)
-		.notNull()
+		.notNull(),
+	/** Vehicle range in km on a full tank/charge; null = range planner off. */
+	rangeKm: integer('range_km'),
+	/** 'fuel' or 'ev'; null when unset. */
+	fuelType: varchar('fuel_type', { length: 16 })
 });
 
 export const roadTripRelations = relations(roadTrip, ({ one, many }) => ({
