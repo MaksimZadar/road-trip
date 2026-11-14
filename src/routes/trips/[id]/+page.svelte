@@ -3,6 +3,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { enhance } from '$app/forms';
 	import { ChevronLeft, Trash2, Route, Plus, Check, CloudSun, Pencil, Trash } from '@lucide/svelte';
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import Backpack from '@lucide/svelte/icons/backpack';
 	import ListOrdered from '@lucide/svelte/icons/list-ordered';
 	import MapIcon from '@lucide/svelte/icons/map';
@@ -12,6 +14,9 @@
 	import Navigation from '@lucide/svelte/icons/navigation';
 	import StatBlock from '$lib/components/trip/StatBlock.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import PlaceSearch from '$lib/components/PlaceSearch.svelte';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
@@ -23,7 +28,20 @@
 	import NextStopHero from '$lib/components/trip/NextStopHero.svelte';
 	import TimelineStop from '$lib/components/trip/TimelineStop.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	let editTripOpen = $state(false);
+	let editingItinerary = $state(false);
+	let confirmRemoveId = $state<string | null>(null);
+	let newStop = $state<{ name: string; display: string; lat: number; lon: number } | null>(null);
+	let stopSearchValue = $state('');
+
+	const plannedDateValue = $derived.by(() => {
+		const d = new Date(data.trip.plannedDate);
+		const mm = String(d.getMonth() + 1).padStart(2, '0');
+		const dd = String(d.getDate()).padStart(2, '0');
+		return `${d.getFullYear()}-${mm}-${dd}`;
+	});
 
 	let activeTab = $state('itinerary');
 	let showNewCategoryInput = $state(false);
@@ -302,6 +320,52 @@
 	</div>
 </header>
 
+<Dialog.Root bind:open={editTripOpen}>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Edit trip</Dialog.Title>
+			<Dialog.Description>Update the trip name, notes and date.</Dialog.Description>
+		</Dialog.Header>
+		<form
+			action="?/updateTrip"
+			method="POST"
+			class="space-y-4"
+			use:enhance={() => {
+				return async ({ result, update }) => {
+					await update();
+					if (result.type === 'success' || result.type === 'redirect') editTripOpen = false;
+				};
+			}}
+		>
+			<div class="space-y-1.5">
+				<label for="edit-title" class="text-sm font-medium">Title</label>
+				<Input id="edit-title" name="title" value={data.trip.title} maxlength={128} required />
+			</div>
+			<div class="space-y-1.5">
+				<label for="edit-description" class="text-sm font-medium">Description</label>
+				<Textarea
+					id="edit-description"
+					name="description"
+					value={data.trip.description ?? ''}
+					maxlength={500}
+					rows={3}
+				/>
+			</div>
+			<div class="space-y-1.5">
+				<label for="edit-date" class="text-sm font-medium">Date</label>
+				<Input id="edit-date" name="plannedDate" type="date" value={plannedDateValue} required />
+			</div>
+			{#if form?.message}
+				<p class="text-sm text-destructive" role="alert">{form.message}</p>
+			{/if}
+			<Dialog.Footer>
+				<Button type="button" variant="ghost" onclick={() => (editTripOpen = false)}>Cancel</Button>
+				<Button type="submit">Save</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
 <Tabs.Root bind:value={activeTab} class="gap-0">
 	<Tabs.Content value="itinerary" class="pb-24">
 		<div class="mx-auto w-full max-w-md px-4 py-6">
@@ -330,6 +394,10 @@
 			</header>
 
 			<div class="mt-4 flex flex-wrap items-center gap-2">
+				<Button variant="outline" size="sm" onclick={() => (editTripOpen = true)}>
+					<Pencil class="size-4" aria-hidden="true" />
+					Edit Trip
+				</Button>
 				{#if data.hasMissingDistances}
 					<form action="?/calculateDistances" method="POST" use:enhance>
 						<Button type="submit" variant="outline" size="sm">
@@ -380,9 +448,31 @@
 				</NextStopHero>
 			{/if}
 
-			<p class="mt-8 mb-3 text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">
-				Today's Route
-			</p>
+			<div class="mt-8 mb-3 flex items-center justify-between gap-2">
+				<p class="text-xs font-bold tracking-[0.2em] text-muted-foreground uppercase">
+					Today's Route
+				</p>
+				<Button
+					variant={editingItinerary ? 'default' : 'outline'}
+					size="sm"
+					aria-pressed={editingItinerary}
+					onclick={() => {
+						editingItinerary = !editingItinerary;
+						confirmRemoveId = null;
+					}}
+				>
+					{#if editingItinerary}
+						<Check class="size-4" aria-hidden="true" />
+						Done
+					{:else}
+						<Pencil class="size-4" aria-hidden="true" />
+						Edit stops
+					{/if}
+				</Button>
+			</div>
+			{#if form?.message}
+				<p class="mb-3 text-sm text-destructive" role="alert">{form.message}</p>
+			{/if}
 
 			<div class="space-y-4">
 				<!-- Origin -->
@@ -582,6 +672,68 @@
 								</Button>
 							</div>
 						{/if}
+						{#if editingItinerary}
+							<div
+								class="mt-2 flex items-center gap-2 border-t-2 border-dashed border-dashed-grey pt-2"
+							>
+								{#if confirmRemoveId === stop.placeId}
+									<p class="mr-auto text-sm font-medium text-destructive">Remove this stop?</p>
+									<form action="?/removeStop" method="POST" use:enhance>
+										<input type="hidden" name="placeId" value={stop.placeId} />
+										<Button type="submit" size="sm" variant="destructive" class="h-11"
+											>Remove</Button
+										>
+									</form>
+									<Button
+										type="button"
+										size="sm"
+										variant="ghost"
+										class="h-11"
+										onclick={() => (confirmRemoveId = null)}
+									>
+										Cancel
+									</Button>
+								{:else}
+									<form action="?/moveStop" method="POST" use:enhance>
+										<input type="hidden" name="placeId" value={stop.placeId} />
+										<input type="hidden" name="direction" value="up" />
+										<Button
+											type="submit"
+											variant="outline"
+											size="icon"
+											class="size-11"
+											disabled={i === 0}
+											aria-label="Move stop up"
+										>
+											<ArrowUp class="size-4" aria-hidden="true" />
+										</Button>
+									</form>
+									<form action="?/moveStop" method="POST" use:enhance>
+										<input type="hidden" name="placeId" value={stop.placeId} />
+										<input type="hidden" name="direction" value="down" />
+										<Button
+											type="submit"
+											variant="outline"
+											size="icon"
+											class="size-11"
+											disabled={i === data.trip.stops.length - 1}
+											aria-label="Move stop down"
+										>
+											<ArrowDown class="size-4" aria-hidden="true" />
+										</Button>
+									</form>
+									<Button
+										type="button"
+										variant="ghost"
+										class="ml-auto h-11 text-destructive"
+										onclick={() => (confirmRemoveId = stop.placeId)}
+									>
+										<Trash2 class="size-4" aria-hidden="true" />
+										Remove
+									</Button>
+								{/if}
+							</div>
+						{/if}
 						{#if data.weatherData[stop.place.id]}
 							<WeatherCard
 								weather={data.weatherData[stop.place.id]}
@@ -590,6 +742,40 @@
 						{/if}
 					</TimelineStop>
 				{/each}
+
+				{#if editingItinerary}
+					<form
+						action="?/addStop"
+						method="POST"
+						class="space-y-3 rounded-lg border-2 border-dashed border-border bg-card p-3"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+								newStop = null;
+								stopSearchValue = '';
+							};
+						}}
+					>
+						<p class="text-xs font-bold tracking-[0.15em] text-muted-foreground uppercase">
+							Add stop
+						</p>
+						<PlaceSearch
+							bind:value={stopSearchValue}
+							onSelect={(p) =>
+								(newStop = { name: p.name, display: p.display_name, lat: p.lat, lon: p.lon })}
+						/>
+						{#if newStop}
+							<input type="hidden" name="stopName" value={newStop.name} />
+							<input type="hidden" name="stopDisplayName" value={newStop.display} />
+							<input type="hidden" name="stopLat" value={newStop.lat} />
+							<input type="hidden" name="stopLon" value={newStop.lon} />
+						{/if}
+						<Button type="submit" class="h-11 w-full" disabled={!newStop}>
+							<Plus class="size-4" aria-hidden="true" />
+							Add stop
+						</Button>
+					</form>
+				{/if}
 
 				<!-- Destination -->
 				{#if data.trip.destination}

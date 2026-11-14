@@ -1,9 +1,10 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { getWeatherForTrip, deleteCachedWeatherForTrip } from '$lib/server/services/weather';
+import { getPlaceId } from '$lib/server/services/places';
 import { ensureRouteLegs } from '$lib/server/services/routing';
 import { isWeatherForecastAvailable } from '$lib/utils/weather';
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { and, eq, isNull, lte } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -437,5 +438,168 @@ export const actions: Actions = {
 			);
 
 		return { success: true };
+	},
+	updateTrip: async ({ params, request }) => {
+		const formData = await request.formData();
+		const title = readField(formData, 'title').trim();
+		const description = readField(formData, 'description').trim();
+		const plannedDateStr = readField(formData, 'plannedDate').trim();
+
+		if (!title) return fail(400, { message: 'Title is required' });
+		if (title.length > 128) return fail(400, { message: 'Title must be 128 characters or fewer' });
+		if (description.length > 500) {
+			return fail(400, { message: 'Description must be 500 characters or fewer' });
+		}
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(plannedDateStr) || isNaN(new Date(plannedDateStr).getTime())) {
+			return fail(400, { message: 'A valid planned date is required' });
+		}
+
+		const updated = await db
+			.update(schema.roadTrip)
+			.set({
+				title,
+				description: description || null,
+				plannedDate: new Date(plannedDateStr)
+			})
+			.where(eq(schema.roadTrip.id, params.id))
+			.returning({ id: schema.roadTrip.id });
+
+		if (updated.length === 0) return fail(404, { message: 'Trip not found' });
+
+		return { success: true };
+	},
+	addStop: async ({ params, request }) => {
+		const formData = await request.formData();
+		const displayName = readField(formData, 'stopDisplayName').trim();
+		const name = readField(formData, 'stopName').trim() || displayName.split(',')[0];
+		const lat = parseFloat(readField(formData, 'stopLat'));
+		const lon = parseFloat(readField(formData, 'stopLon'));
+
+		if (!displayName) return fail(400, { message: 'Please select a place to add as a stop' });
+		if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+			return fail(400, { message: 'Selected place is missing coordinates' });
+		}
+
+		const trip = await findTripWithStops(params.id);
+		if (!trip) return fail(404, { message: 'Trip not found' });
+
+		const placeId = await getPlaceId(name, displayName, lat, lon);
+
+		// roadTripStops primary key is (roadTripId, placeId), so a place can appear only once.
+		if (trip.stops.some((s) => s.placeId === placeId)) {
+			return fail(400, { message: 'This place is already a stop on this trip' });
+		}
+
+		await db.insert(schema.roadTripStops).values({
+			roadTripId: params.id,
+			placeId,
+			order: trip.stops.length
+		});
+
+		await normalizeStopOrder(params.id);
+		await refreshRouteLegs(params.id);
+
+		return { success: true };
+	},
+	removeStop: async ({ params, request }) => {
+		const formData = await request.formData();
+		const placeId = readField(formData, 'placeId');
+		if (!placeId) return fail(400, { message: 'Missing stop' });
+
+		const removed = await db
+			.delete(schema.roadTripStops)
+			.where(
+				and(
+					eq(schema.roadTripStops.roadTripId, params.id),
+					eq(schema.roadTripStops.placeId, placeId)
+				)
+			)
+			.returning({ placeId: schema.roadTripStops.placeId });
+
+		if (removed.length === 0) return fail(404, { message: 'Stop not found on this trip' });
+
+		await normalizeStopOrder(params.id);
+		await refreshRouteLegs(params.id);
+
+		return { success: true };
+	},
+	moveStop: async ({ params, request }) => {
+		const formData = await request.formData();
+		const placeId = readField(formData, 'placeId');
+		const direction = readField(formData, 'direction');
+
+		if (!placeId) return fail(400, { message: 'Missing stop' });
+		if (direction !== 'up' && direction !== 'down') {
+			return fail(400, { message: 'Direction must be "up" or "down"' });
+		}
+
+		const orderedIds = await normalizeStopOrder(params.id);
+		const index = orderedIds.indexOf(placeId);
+		if (index === -1) return fail(404, { message: 'Stop not found on this trip' });
+
+		const targetIndex = direction === 'up' ? index - 1 : index + 1;
+		if (targetIndex < 0 || targetIndex >= orderedIds.length) {
+			return fail(400, {
+				message: `Stop is already at the ${direction === 'up' ? 'top' : 'bottom'}`
+			});
+		}
+
+		// Swap the two neighbouring stops, then write the contiguous order back.
+		[orderedIds[index], orderedIds[targetIndex]] = [orderedIds[targetIndex], orderedIds[index]];
+		await writeStopOrder(params.id, orderedIds);
+		await refreshRouteLegs(params.id);
+
+		return { success: true };
 	}
 };
+
+function readField(formData: FormData, key: string): string {
+	const value = formData.get(key);
+	return typeof value === 'string' ? value : '';
+}
+
+async function findTripWithStops(tripId: string) {
+	return db.query.roadTrip.findFirst({
+		where: (roadTrip, { eq }) => eq(roadTrip.id, tripId),
+		with: {
+			origin: true,
+			destination: true,
+			stops: {
+				with: { place: true },
+				orderBy: (stops, { asc }) => [asc(stops.order)]
+			}
+		}
+	});
+}
+
+/** Renumbers a trip's stops to contiguous 0..n-1 and returns their place IDs in order. */
+async function normalizeStopOrder(tripId: string): Promise<string[]> {
+	const stops = await db.query.roadTripStops.findMany({
+		where: (stops, { eq }) => eq(stops.roadTripId, tripId),
+		orderBy: (stops, { asc }) => [asc(stops.order)]
+	});
+	const orderedIds = stops.map((s) => s.placeId);
+	await writeStopOrder(tripId, orderedIds);
+	return orderedIds;
+}
+
+async function writeStopOrder(tripId: string, orderedPlaceIds: string[]): Promise<void> {
+	for (let i = 0; i < orderedPlaceIds.length; i++) {
+		await db
+			.update(schema.roadTripStops)
+			.set({ order: i })
+			.where(
+				and(
+					eq(schema.roadTripStops.roadTripId, tripId),
+					eq(schema.roadTripStops.placeId, orderedPlaceIds[i])
+				)
+			);
+	}
+}
+
+/** Fetches any missing route legs (origin → stops → destination) for the trip. */
+async function refreshRouteLegs(tripId: string): Promise<void> {
+	const trip = await findTripWithStops(tripId);
+	if (!trip) return;
+	await ensureRouteLegs([trip.origin, ...trip.stops.map((s) => s.place), trip.destination]);
+}
