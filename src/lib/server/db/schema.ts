@@ -2,6 +2,8 @@ import { relations } from 'drizzle-orm';
 import {
 	date,
 	integer,
+	index,
+	jsonb,
 	pgTable,
 	primaryKey,
 	doublePrecision,
@@ -9,9 +11,11 @@ import {
 	time,
 	timestamp,
 	uuid,
+	uniqueIndex,
 	varchar,
 	boolean
 } from 'drizzle-orm/pg-core';
+import type { PoiDetail, PoiSummary } from '$lib/utils/poi';
 
 export const roadTrip = pgTable('road_trip', {
 	id: uuid('id').primaryKey().defaultRandom(),
@@ -39,7 +43,8 @@ export const roadTripRelations = relations(roadTrip, ({ one, many }) => ({
 		relationName: 'destination'
 	}),
 	stops: many(roadTripStops),
-	checklist: many(checklistItem)
+	checklist: many(checklistItem),
+	pins: many(tripPoiPin)
 }));
 
 export const category = pgTable('category', {
@@ -170,6 +175,63 @@ export const weatherCache = pgTable(
 export const weatherCacheRelations = relations(weatherCache, ({ one }) => ({
 	place: one(places, {
 		fields: [weatherCache.placeId],
+		references: [places.id]
+	})
+}));
+
+export const poiSearchCache = pgTable(
+	'poi_search_cache',
+	{
+		placeId: uuid('place_id')
+			.notNull()
+			.references(() => places.id, { onDelete: 'cascade' }),
+		chip: varchar('chip', { length: 32 }).notNull(),
+		radiusMeters: integer('radius_meters').notNull(),
+		results: jsonb('results').$type<PoiSummary[]>().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull()
+	},
+	(t) => [primaryKey({ columns: [t.placeId, t.chip] })]
+);
+
+export const poiDetailCache = pgTable('poi_detail_cache', {
+	xid: varchar('xid', { length: 32 }).primaryKey(),
+	data: jsonb('data').$type<PoiDetail>(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+/** A POI the user pinned to a trip. `anchorPlaceId` is the place it was found near (origin, stop or destination). */
+export const tripPoiPin = pgTable(
+	'trip_poi_pin',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		roadTripId: uuid('road_trip_id')
+			.notNull()
+			.references(() => roadTrip.id, { onDelete: 'cascade' }),
+		anchorPlaceId: uuid('anchor_place_id')
+			.notNull()
+			.references(() => places.id, { onDelete: 'cascade' }),
+		xid: varchar('xid', { length: 32 }).notNull(),
+		name: varchar('name', { length: 256 }).notNull(),
+		chip: varchar('chip', { length: 32 }).notNull(),
+		latitude: doublePrecision('latitude').notNull(),
+		longitude: doublePrecision('longitude').notNull(),
+		distanceMeters: integer('distance_meters'),
+		note: varchar('note', { length: 500 }),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(t) => [
+		uniqueIndex('trip_poi_pin_trip_xid_uq').on(t.roadTripId, t.xid),
+		index('trip_poi_pin_trip_anchor_idx').on(t.roadTripId, t.anchorPlaceId)
+	]
+);
+
+export const tripPoiPinRelations = relations(tripPoiPin, ({ one }) => ({
+	roadTrip: one(roadTrip, {
+		fields: [tripPoiPin.roadTripId],
+		references: [roadTrip.id]
+	}),
+	anchorPlace: one(places, {
+		fields: [tripPoiPin.anchorPlaceId],
 		references: [places.id]
 	})
 }));

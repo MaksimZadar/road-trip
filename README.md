@@ -36,6 +36,7 @@
    ```env
    DATABASE_URL=postgres://root:mysecretpassword@localhost:5432/local
    OPENROUTE_API_KEY=your_api_key_here
+   OPENTRIPMAP_API_KEY=your_api_key_here
    ```
 
 4. **Start the database**:
@@ -66,6 +67,8 @@ docker compose up -d
 ```
 
 Compose reads `OPENROUTE_API_KEY` from your shell or from a `.env` file next to `compose.yaml`, so set it there before starting (e.g. `OPENROUTE_API_KEY=your_api_key_here`). Do not commit real keys.
+
+`OPENTRIPMAP_API_KEY` is optional. It enables the "things to do" suggestions (free key at [opentripmap.io](https://opentripmap.io/product)). Without it the feature is disabled. Attribution: place data is provided by [OpenTripMap](https://opentripmap.io) (data © OpenStreetMap contributors, Wikidata and Wikipedia where applicable, licensed ODbL). Keep this attribution wherever OpenTripMap data is shown.
 
 The app will be available at [http://localhost:3000](http://localhost:3000).
 

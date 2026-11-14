@@ -24,6 +24,7 @@ services:
     environment:
       DATABASE_URL: postgres://root:mysecretpassword@db:5432/local
       OPENROUTE_API_KEY: ${OPENROUTE_API_KEY}
+      OPENTRIPMAP_API_KEY: ${OPENTRIPMAP_API_KEY}
       ORIGIN: http://localhost:3000
     depends_on:
       db:
