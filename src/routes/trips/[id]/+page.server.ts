@@ -5,7 +5,7 @@ import { getPlaceId } from '$lib/server/services/places';
 import { ensureRouteLegs } from '$lib/server/services/routing';
 import { isWeatherForecastAvailable } from '$lib/utils/weather';
 import { error, fail, redirect } from '@sveltejs/kit';
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { and, eq, isNull, lte, sql } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 
 export const ssr = false;
@@ -167,6 +167,20 @@ export const load: PageServerLoad = async ({ params }) => {
 		});
 	}
 
+	// Number of pinned points of interest per anchor place (origin, stops, destination).
+	const pinCountRows = await db
+		.select({
+			placeId: schema.tripPoiPin.anchorPlaceId,
+			count: sql<number>`count(*)::int`
+		})
+		.from(schema.tripPoiPin)
+		.where(eq(schema.tripPoiPin.roadTripId, params.id))
+		.groupBy(schema.tripPoiPin.anchorPlaceId);
+	const pinCounts: Record<string, number> = {};
+	for (const row of pinCountRows) {
+		pinCounts[row.placeId] = row.count;
+	}
+
 	return {
 		trip,
 		routes,
@@ -176,7 +190,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		isWeatherRefreshAvailable,
 		tripStats,
 		timeline,
-		totalStopDurationMinutes
+		totalStopDurationMinutes,
+		pinCounts
 	};
 };
 
@@ -517,6 +532,22 @@ export const actions: Actions = {
 			.returning({ placeId: schema.roadTripStops.placeId });
 
 		if (removed.length === 0) return fail(404, { message: 'Stop not found on this trip' });
+
+		// Pins found near this stop go with it, unless the place is also the trip's origin or destination.
+		const tripEnds = await db.query.roadTrip.findFirst({
+			where: (roadTrip, { eq }) => eq(roadTrip.id, params.id),
+			columns: { originId: true, destinationId: true }
+		});
+		if (tripEnds && placeId !== tripEnds.originId && placeId !== tripEnds.destinationId) {
+			await db
+				.delete(schema.tripPoiPin)
+				.where(
+					and(
+						eq(schema.tripPoiPin.roadTripId, params.id),
+						eq(schema.tripPoiPin.anchorPlaceId, placeId)
+					)
+				);
+		}
 
 		await normalizeStopOrder(params.id);
 		await refreshRouteLegs(params.id);
