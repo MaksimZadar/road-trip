@@ -12,6 +12,7 @@
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Navigation from '@lucide/svelte/icons/navigation';
+	import Landmark from '@lucide/svelte/icons/landmark';
 	import StatBlock from '$lib/components/trip/StatBlock.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -366,6 +367,17 @@
 	</Dialog.Content>
 </Dialog.Root>
 
+{#snippet thingsToDo(placeId: string)}
+	{@const count = data.pinCounts[placeId] ?? 0}
+	<a
+		href="/trips/{data.trip.id}/stops/{placeId}"
+		class="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-primary underline-offset-4 hover:underline"
+	>
+		<Landmark class="size-4" aria-hidden="true" />
+		Things to do{count > 0 ? ` (${count})` : ''}
+	</a>
+{/snippet}
+
 <Tabs.Root bind:value={activeTab} class="gap-0">
 	<Tabs.Content value="itinerary" class="pb-24">
 		<div class="mx-auto w-full max-w-md px-4 py-6">
@@ -530,6 +542,7 @@
 								</Button>
 							</form>
 						{/if}
+						{@render thingsToDo(data.trip.origin.id)}
 						{#if data.weatherData[data.trip.origin.id]}
 							<WeatherCard
 								weather={data.weatherData[data.trip.origin.id]}
@@ -734,6 +747,7 @@
 								{/if}
 							</div>
 						{/if}
+						{@render thingsToDo(stop.place.id)}
 						{#if data.weatherData[stop.place.id]}
 							<WeatherCard
 								weather={data.weatherData[stop.place.id]}
@@ -788,6 +802,7 @@
 						isLast
 						goHref={getDirectionsUrl(finalPrevPlace, data.trip.destination.displayName)}
 					>
+						{@render thingsToDo(data.trip.destination.id)}
 						{#if data.weatherData[data.trip.destination.id]}
 							<WeatherCard
 								weather={data.weatherData[data.trip.destination.id]}
