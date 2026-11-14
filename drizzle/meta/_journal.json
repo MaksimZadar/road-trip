@@ -57,6 +57,13 @@
       "when": 1794627099872,
       "tag": "0007_motionless_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794627866611,
+      "tag": "0008_silly_klaw",
+      "breakpoints": true
     }
   ]
 }
