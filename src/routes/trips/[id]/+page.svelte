@@ -13,6 +13,7 @@
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Navigation from '@lucide/svelte/icons/navigation';
 	import MapPin from '@lucide/svelte/icons/map-pin';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Landmark from '@lucide/svelte/icons/landmark';
 	import StatBlock from '$lib/components/trip/StatBlock.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -315,6 +316,8 @@
 		return m;
 	});
 
+	const fuelNoun = $derived(data.trip.fuelType === 'ev' ? 'charging' : 'fuel');
+
 	const placeNames = $derived.by(() => {
 		const m: Record<string, string> = { [data.trip.origin.id]: data.trip.origin.displayName };
 		if (data.trip.destination) m[data.trip.destination.id] = data.trip.destination.displayName;
@@ -375,6 +378,35 @@
 				<label for="edit-date" class="text-sm font-medium">Date</label>
 				<Input id="edit-date" name="plannedDate" type="date" value={plannedDateValue} required />
 			</div>
+			<div class="grid grid-cols-2 gap-3">
+				<div class="space-y-1.5">
+					<label for="edit-range" class="text-sm font-medium">Car range (km)</label>
+					<Input
+						id="edit-range"
+						name="rangeKm"
+						type="number"
+						inputmode="numeric"
+						min={50}
+						max={2000}
+						step={1}
+						placeholder="e.g. 500"
+						value={data.trip.rangeKm ?? ''}
+					/>
+				</div>
+				<div class="space-y-1.5">
+					<label for="edit-fuel" class="text-sm font-medium">Fuel type</label>
+					<select
+						id="edit-fuel"
+						name="fuelType"
+						value={data.trip.fuelType ?? ''}
+						class="h-9 w-full rounded-md border-2 border-border bg-card px-2 text-sm"
+					>
+						<option value="">Not set</option>
+						<option value="fuel">Fuel</option>
+						<option value="ev">EV</option>
+					</select>
+				</div>
+			</div>
 			{#if form?.message}
 				<p class="text-sm text-destructive" role="alert">{form.message}</p>
 			{/if}
@@ -412,6 +444,35 @@
 				.join(', ')}{pins.length > 2 ? ` +${pins.length - 2} more` : ''}
 		</a>
 	{/if}
+{/snippet}
+
+{#snippet rangeWarning(toPlaceId: string)}
+	{#each data.rangeWarnings.filter((w) => w.toPlaceId === toPlaceId) as w (w.legIndex)}
+		<div
+			class="relative z-20 rounded-lg border-2 border-destructive bg-card p-3 text-sm"
+			role="note"
+		>
+			<p class="flex items-start gap-2 font-bold text-destructive">
+				<TriangleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+				<span>
+					Long stretch: {Math.round(w.sinceRefuelKm)} km since last {fuelNoun === 'charging'
+						? 'charge'
+						: 'refuel'} (range {w.rangeKm} km)
+				</span>
+			</p>
+			<a
+				href="/trips/{data.trip.id}/stops/{w.suggestAnchorPlaceId}?chip=fuel"
+				class="mt-1 inline-flex min-h-11 items-center text-sm font-bold text-primary underline-offset-4 hover:underline"
+			>
+				Find {fuelNoun}
+			</a>
+			{#if data.hasMissingDistances}
+				<p class="text-xs text-muted-foreground">
+					Some distances are missing, so this may be incomplete.
+				</p>
+			{/if}
+		</div>
+	{/each}
 {/snippet}
 
 <Tabs.Root bind:value={activeTab} class="gap-0">
@@ -590,6 +651,7 @@
 
 				<!-- Stops -->
 				{#each data.trip.stops as stop, i (stop.placeId)}
+					{@render rangeWarning(stop.place.id)}
 					{@const prevPlace =
 						i === 0 ? data.trip.origin.displayName : data.trip.stops[i - 1].place.displayName}
 					{@const timelineEntry = data.timeline && data.timeline[i] ? data.timeline[i] : null}
@@ -829,6 +891,7 @@
 
 				<!-- Destination -->
 				{#if data.trip.destination}
+					{@render rangeWarning(data.trip.destination.id)}
 					<TimelineStop
 						name={data.trip.destination.displayName}
 						typeLabel="FINISH"
