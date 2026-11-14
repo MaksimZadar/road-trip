@@ -22,11 +22,11 @@
 	};
 </script>
 
-<nav aria-label="Categories" class="-mx-4">
-	<ul class="flex gap-2 overflow-x-auto px-4 pt-1 pb-3 [scrollbar-width:none]">
+<nav aria-label="Categories">
+	<ul class="flex flex-wrap gap-1.5 pt-1 pb-3">
 		{#each POI_CHIPS as chip (chip.id)}
 			{@const Icon = icons[chip.icon]}
-			<li class="shrink-0">
+			<li>
 				<a
 					href="?chip={chip.id}"
 					data-sveltekit-replacestate
