@@ -4,8 +4,9 @@ import { getWeatherForTrip, deleteCachedWeatherForTrip } from '$lib/server/servi
 import { getPlaceId } from '$lib/server/services/places';
 import { ensureRouteLegs } from '$lib/server/services/routing';
 import { isWeatherForecastAvailable } from '$lib/utils/weather';
+import { computeRangeWarnings, type FuelType, type RangeLeg } from '$lib/utils/range';
 import { error, fail, redirect } from '@sveltejs/kit';
-import { and, eq, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, isNull, lte } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 
 export const ssr = false;
@@ -167,19 +168,52 @@ export const load: PageServerLoad = async ({ params }) => {
 		});
 	}
 
-	// Number of pinned points of interest per anchor place (origin, stops, destination).
-	const pinCountRows = await db
+	// All pinned points of interest for the trip (one query; counts and range warnings derive from it).
+	const tripPins = await db
 		.select({
-			placeId: schema.tripPoiPin.anchorPlaceId,
-			count: sql<number>`count(*)::int`
+			id: schema.tripPoiPin.id,
+			xid: schema.tripPoiPin.xid,
+			name: schema.tripPoiPin.name,
+			chip: schema.tripPoiPin.chip,
+			latitude: schema.tripPoiPin.latitude,
+			longitude: schema.tripPoiPin.longitude,
+			distanceMeters: schema.tripPoiPin.distanceMeters,
+			anchorPlaceId: schema.tripPoiPin.anchorPlaceId
 		})
 		.from(schema.tripPoiPin)
-		.where(eq(schema.tripPoiPin.roadTripId, params.id))
-		.groupBy(schema.tripPoiPin.anchorPlaceId);
+		.where(eq(schema.tripPoiPin.roadTripId, params.id));
+
+	// Number of pinned points of interest per anchor place (origin, stops, destination).
 	const pinCounts: Record<string, number> = {};
-	for (const row of pinCountRows) {
-		pinCounts[row.placeId] = row.count;
+	for (const pin of tripPins) {
+		pinCounts[pin.anchorPlaceId] = (pinCounts[pin.anchorPlaceId] ?? 0) + 1;
 	}
+
+	// Range warnings: legs where the vehicle runs past its safe range without a fuel/charge pin at the origin.
+	// Legs with unknown distance (missing route) count as 0 km, so warnings may be incomplete.
+	const fuelAnchorIds = new Set(
+		tripPins.filter((pin) => pin.chip === 'fuel').map((pin) => pin.anchorPlaceId)
+	);
+	const rangeLegs: RangeLeg[] = [];
+	for (let i = 0; i < sequence.length - 1; i++) {
+		const from = sequence[i];
+		const to = sequence[i + 1];
+		rangeLegs.push({
+			fromPlaceId: from.id,
+			toPlaceId: to.id,
+			fromName: from.name,
+			toName: to.name,
+			distanceMeters: routes[i]?.distanceMeters ?? 0,
+			hasFuelPinAtFrom: fuelAnchorIds.has(from.id)
+		});
+	}
+	const rangeWarnings =
+		trip.rangeKm == null
+			? []
+			: computeRangeWarnings(rangeLegs, {
+					rangeKm: trip.rangeKm,
+					fuelType: (trip.fuelType === 'ev' ? 'ev' : 'fuel') as FuelType
+				});
 
 	return {
 		trip,
@@ -191,7 +225,9 @@ export const load: PageServerLoad = async ({ params }) => {
 		tripStats,
 		timeline,
 		totalStopDurationMinutes,
-		pinCounts
+		pinCounts,
+		tripPins,
+		rangeWarnings
 	};
 };
 
@@ -460,6 +496,32 @@ export const actions: Actions = {
 		const description = readField(formData, 'description').trim();
 		const plannedDateStr = readField(formData, 'plannedDate').trim();
 
+		// Range fields are optional: only touched when the form sends them.
+		const rangeKmRaw = readField(formData, 'rangeKm').trim();
+		const fuelTypeRaw = readField(formData, 'fuelType').trim();
+		let rangeKm: number | null | undefined;
+		let fuelType: FuelType | null | undefined;
+		if (formData.has('rangeKm')) {
+			if (rangeKmRaw === '') {
+				rangeKm = null;
+			} else {
+				const parsed = Number(rangeKmRaw);
+				if (!/^\d+$/.test(rangeKmRaw) || parsed < 50 || parsed > 2000) {
+					return fail(400, { message: 'Range must be a whole number between 50 and 2000 km' });
+				}
+				rangeKm = parsed;
+			}
+		}
+		if (formData.has('fuelType')) {
+			if (fuelTypeRaw === '') {
+				fuelType = null;
+			} else if (fuelTypeRaw === 'fuel' || fuelTypeRaw === 'ev') {
+				fuelType = fuelTypeRaw;
+			} else {
+				return fail(400, { message: 'Fuel type must be "fuel" or "ev"' });
+			}
+		}
+
 		if (!title) return fail(400, { message: 'Title is required' });
 		if (title.length > 128) return fail(400, { message: 'Title must be 128 characters or fewer' });
 		if (description.length > 500) {
@@ -474,7 +536,9 @@ export const actions: Actions = {
 			.set({
 				title,
 				description: description || null,
-				plannedDate: new Date(plannedDateStr)
+				plannedDate: new Date(plannedDateStr),
+				...(rangeKm !== undefined && { rangeKm }),
+				...(fuelType !== undefined && { fuelType })
 			})
 			.where(eq(schema.roadTrip.id, params.id))
 			.returning({ id: schema.roadTrip.id });
