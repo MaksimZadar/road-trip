@@ -1,6 +1,26 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
+interface PhotonProperties {
+	name?: string;
+	street?: string;
+	district?: string;
+	city?: string;
+	state?: string;
+	country?: string;
+	osm_type: string;
+	osm_id: number;
+}
+
+interface PhotonFeature {
+	geometry: { coordinates: [number, number] };
+	properties: PhotonProperties;
+}
+
+interface PhotonResponse {
+	features: PhotonFeature[];
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	const query = url.searchParams.get('q');
 	if (!query) {
@@ -16,14 +36,16 @@ export const GET: RequestHandler = async ({ url }) => {
 			throw new Error('Failed to fetch from Photon');
 		}
 
-		const data = await response.json();
+		const data: PhotonResponse = await response.json();
 
 		// Map Photon GeoJSON to a simpler format for the frontend
-		const results = data.features.map((feature: any) => {
+		const results = data.features.map((feature) => {
 			const p = feature.properties;
 
 			// Build a descriptive display name while avoiding duplicates
-			const parts = [p.name, p.street, p.district, p.city, p.state, p.country].filter(Boolean);
+			const parts = [p.name, p.street, p.district, p.city, p.state, p.country].filter(
+				(part): part is string => Boolean(part)
+			);
 
 			// Simple deduplication of adjacent identical parts
 			const uniqueParts: string[] = [];

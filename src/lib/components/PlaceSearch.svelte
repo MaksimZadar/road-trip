@@ -10,9 +10,17 @@
 		onSelect?: (place: { name: string; display_name: string; lat: number; lon: number }) => void;
 	}>();
 
+	interface PlaceSearchResult {
+		name: string;
+		display_name: string;
+		place_id: string;
+		lat: number;
+		lon: number;
+	}
+
 	let open = $state(false);
 	let searchValue = $state('');
-	let results = $state<any[]>([]);
+	let results = $state<PlaceSearchResult[]>([]);
 	let loading = $state(false);
 	let error = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>;
@@ -54,7 +62,7 @@
 		}
 	});
 
-	function closeAndSelect(place: any) {
+	function closeAndSelect(place: PlaceSearchResult) {
 		value = place.display_name;
 		open = false;
 		if (onSelect) {
