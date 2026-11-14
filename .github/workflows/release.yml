@@ -5,9 +5,14 @@ on:
     branches:
       - main
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
       issues: write
@@ -19,18 +24,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
+          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm check
 
       - name: Semantic Release
         id: semantic
@@ -49,11 +61,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and Push Docker image
         if: steps.semantic.outputs.new_release_published == 'true'
-        run: |
-          VERSION=${{ steps.semantic.outputs.new_release_version }}
-          IMAGE_NAME=maxzadar/road-trip
-          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$VERSION .
-          docker push $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:$VERSION
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            maxzadar/road-trip:latest
+            maxzadar/road-trip:${{ steps.semantic.outputs.new_release_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
