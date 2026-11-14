@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { getWeatherForTrip, deleteCachedWeatherForTrip } from '$lib/server/services/weather';
+import { ensureRouteLegs } from '$lib/server/services/routing';
 import { isWeatherForecastAvailable } from '$lib/utils/weather';
 import { error, redirect } from '@sveltejs/kit';
 import { and, eq, isNull, lte } from 'drizzle-orm';
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad, Actions } from './$types';
 
 export const ssr = false;
@@ -215,66 +215,7 @@ export const actions: Actions = {
 
 		if (!trip) throw error(404, 'Trip not found');
 
-		const sequence = [trip.origin, ...trip.stops.map((s) => s.place), trip.destination];
-
-		for (let i = 0; i < sequence.length - 1; i++) {
-			const from = sequence[i];
-			const to = sequence[i + 1];
-
-			if (
-				from.latitude === null ||
-				from.longitude === null ||
-				to.latitude === null ||
-				to.longitude === null
-			) {
-				continue;
-			}
-
-			const existing = await db.query.routeCache.findFirst({
-				where: (rc, { and, eq }) => and(eq(rc.fromPlaceId, from.id), eq(rc.toPlaceId, to.id))
-			});
-
-			if (existing) {
-				console.log('found existing route');
-				continue;
-			}
-
-			console.log('no existing route cache found');
-
-			try {
-				const response = await fetch(
-					'https://api.openrouteservice.org/v2/directions/driving-car/json',
-					{
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: env.OPENROUTE_API_KEY
-						},
-						body: JSON.stringify({
-							coordinates: [
-								[from.longitude, from.latitude],
-								[to.longitude, to.latitude]
-							]
-						})
-					}
-				);
-				const data = await response.json();
-				console.log(data);
-
-				if (data.routes && data.routes.length > 0) {
-					const route = data.routes[0];
-					await db.insert(schema.routeCache).values({
-						fromPlaceId: from.id,
-						toPlaceId: to.id,
-						distanceMeters: Math.round(route.summary.distance),
-						durationSeconds: Math.round(route.summary.duration),
-						polyline: route.geometry
-					});
-				}
-			} catch (e) {
-				console.error('OpenRouteService error:', e);
-			}
-		}
+		await ensureRouteLegs([trip.origin, ...trip.stops.map((s) => s.place), trip.destination]);
 
 		return { success: true };
 	},

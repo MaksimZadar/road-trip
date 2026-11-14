@@ -1,8 +1,8 @@
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
+import { getPlaceId } from '$lib/server/services/places';
+import { getOrFetchRoute } from '$lib/server/services/routing';
 import { fail, redirect, type Redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
-import { env } from '$env/dynamic/private';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -32,91 +32,6 @@ export const actions: Actions = {
 		}
 
 		try {
-			// Helper function to upsert a place and return its ID
-			async function getPlaceId(name: string, displayName: string, lat?: number, lon?: number) {
-				const existing = await db.query.places.findFirst({
-					where: (places, { eq }) => eq(places.displayName, displayName)
-				});
-
-				if (existing) {
-					// Update coordinates if they are missing
-					if (
-						lat !== undefined &&
-						lon !== undefined &&
-						(existing.latitude === null || existing.longitude === null)
-					) {
-						await db
-							.update(schema.places)
-							.set({ latitude: lat, longitude: lon })
-							.where(eq(schema.places.id, existing.id));
-					}
-					return existing.id;
-				}
-
-				const result = await db
-					.insert(schema.places)
-					.values({
-						name,
-						displayName,
-						latitude: lat,
-						longitude: lon
-					})
-					.returning({ id: schema.places.id });
-				return result[0].id;
-			}
-
-			// Helper function to get/cache route
-			async function getCachedRoute(
-				fromId: string,
-				toId: string,
-				fromCoord: [number, number],
-				toCoord: [number, number]
-			) {
-				const existing = await db.query.routeCache.findFirst({
-					where: (rc, { and, eq }) => and(eq(rc.fromPlaceId, fromId), eq(rc.toPlaceId, toId))
-				});
-
-				if (existing) return existing;
-
-				try {
-					const response = await fetch(
-						'https://api.openrouteservice.org/v2/directions/driving-car/json',
-						{
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: env.OPENROUTE_API_KEY
-							},
-							body: JSON.stringify({
-								coordinates: [
-									[fromCoord[1], fromCoord[0]],
-									[toCoord[1], toCoord[0]]
-								]
-							})
-						}
-					);
-					const data = await response.json();
-
-					if (data.routes && data.routes.length > 0) {
-						const route = data.routes[0];
-						const [newRoute] = await db
-							.insert(schema.routeCache)
-							.values({
-								fromPlaceId: fromId,
-								toPlaceId: toId,
-								distanceMeters: Math.round(route.summary.distance),
-								durationSeconds: Math.round(route.summary.duration),
-								polyline: route.geometry
-							})
-							.returning();
-						return newRoute;
-					}
-				} catch (e) {
-					console.error('OpenRouteService error:', e);
-				}
-				return null;
-			}
-
 			const originId = await getPlaceId(originName, originDisplayName, originLat, originLon);
 			const destinationId = await getPlaceId(
 				destinationName,
@@ -163,7 +78,7 @@ export const actions: Actions = {
 			for (let i = 0; i < stopsData.length - 1; i++) {
 				const from = stopsData[i];
 				const to = stopsData[i + 1];
-				await getCachedRoute(from.id, to.id, [from.lat, from.lon], [to.lat, to.lon]);
+				await getOrFetchRoute(from.id, to.id, [from.lat, from.lon], [to.lat, to.lon]);
 			}
 
 			return redirect(303, `/trips/${newTrip.id}`);
