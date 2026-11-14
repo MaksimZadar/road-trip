@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { decodePolyline } from '$lib/utils/polyline';
 	import { Map, TileLayer, Marker, Popup, Polyline } from 'sveaflet';
 	import * as L from 'leaflet';
+	import { POI_CHIPS } from '$lib/utils/poi';
 	import LocateFixed from '@lucide/svelte/icons/locate-fixed';
 
 	interface Place {
@@ -43,6 +45,20 @@
 		 *  container — tab switches fire no resize event, so without this the map
 		 *  keeps the 0×0 grid it was initialized with. */
 		active?: boolean;
+		pins?: TripPin[];
+		/** placeId -> display name, for "near …" */
+		placeNames?: Record<string, string>;
+		tripId?: string;
+	}
+
+	interface TripPin {
+		id: string;
+		name: string;
+		chip: string;
+		latitude: number;
+		longitude: number;
+		distanceMeters: number | null;
+		anchorPlaceId: string | null;
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
@@ -53,8 +69,69 @@
 		routes,
 		stopStatuses = [],
 		legDriven = [],
-		active = true
+		active = true,
+		pins = [],
+		placeNames = {},
+		tripId = ''
 	}: Props = $props();
+
+	let showPins = $state(true);
+	onMount(() => {
+		try {
+			if (localStorage.getItem('trip-map-show-pins') === '0') showPins = false;
+		} catch {
+			/* storage unavailable */
+		}
+	});
+	function togglePins() {
+		showPins = !showPins;
+		try {
+			localStorage.setItem('trip-map-show-pins', showPins ? '1' : '0');
+		} catch {
+			/* ignore */
+		}
+	}
+
+	const CHIP_GLYPH: Record<string, string> = {
+		sights: '★',
+		history: '♜',
+		nature: '▲',
+		fun: '✦',
+		food: '✚',
+		fuel: '⛽',
+		stay: '⌂'
+	};
+
+	function pinIcon(pin: TripPin) {
+		const size = 24;
+		return L.divIcon({
+			className: 'trip-pin',
+			iconSize: [size, size],
+			iconAnchor: [size / 2, size / 2],
+			popupAnchor: [0, -size / 2],
+			html: `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:6px;transform:rotate(45deg);border:2px solid ${INK};box-shadow:2px 2px 0 0 ${INK};background:${MUSTARD};color:${INK};"><span style="transform:rotate(-45deg);font-size:12px;line-height:1;">${CHIP_GLYPH[pin.chip] ?? '•'}</span></div>`
+		});
+	}
+
+	function pinPopupHtml(pin: TripPin) {
+		const chipLabel = POI_CHIPS.find((c) => c.id === pin.chip)?.label ?? 'Pinned place';
+		const near = pin.anchorPlaceId ? placeNames[pin.anchorPlaceId] : null;
+		const dist =
+			pin.distanceMeters != null
+				? pin.distanceMeters >= 1000
+					? `${(pin.distanceMeters / 1000).toFixed(1)} km`
+					: `${Math.round(pin.distanceMeters)} m`
+				: null;
+		const dir = `https://www.google.com/maps/dir/?api=1&destination=${pin.latitude},${pin.longitude}`;
+		const sub = [near ? `Near ${escapeHtml(near)}` : '', dist ? `${dist} away` : '']
+			.filter(Boolean)
+			.join(' · ');
+		const todo =
+			pin.anchorPlaceId && tripId
+				? `<a href="/trips/${tripId}/stops/${pin.anchorPlaceId}" class="trip-popup-link" style="margin-left:12px;">Things to do</a>`
+				: '';
+		return `<div class="trip-popup"><div class="trip-popup-kicker">${escapeHtml(chipLabel)}</div><div class="trip-popup-name">${escapeHtml(pin.name)}</div>${sub ? `<div style="font-size:13px;color:var(--muted-foreground);">${sub}</div>` : ''}<a href="${dir}" target="_blank" rel="noopener noreferrer" class="trip-popup-link">Directions</a>${todo}</div>`;
+	}
 
 	let mapInstance: import('leaflet').Map | undefined = $state(undefined);
 
@@ -256,6 +333,17 @@
 					{/if}
 				{/each}
 
+				{#if showPins}
+					{#each pins as pin (pin.id)}
+						<Marker
+							latLng={[pin.latitude, pin.longitude]}
+							options={{ icon: pinIcon(pin), zIndexOffset: 120, title: pin.name }}
+						>
+							<Popup options={{ content: pinPopupHtml(pin) }} />
+						</Marker>
+					{/each}
+				{/if}
+
 				<!-- Destination marker -->
 				{#if destination.latitude && destination.longitude}
 					{@const fromPlace = stops.length > 0 ? stops[stops.length - 1].place : origin}
@@ -286,6 +374,18 @@
 	>
 		<LocateFixed class="size-5 text-deep-teal" />
 	</button>
+	{#if pins.length > 0}
+		<button
+			type="button"
+			onclick={togglePins}
+			aria-pressed={showPins}
+			class="absolute top-16 right-3 z-20 flex min-h-11 items-center rounded-full border-2 border-border px-3 text-xs font-bold tracking-wide uppercase shadow-hard transition-transform active:translate-y-0.5 {showPins
+				? 'bg-accent text-accent-foreground'
+				: 'bg-card text-foreground'}"
+		>
+			{showPins ? 'Pins on' : 'Pins off'}
+		</button>
+	{/if}
 </div>
 
 <style>

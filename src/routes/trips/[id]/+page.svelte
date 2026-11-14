@@ -12,6 +12,7 @@
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Wallet from '@lucide/svelte/icons/wallet';
 	import Navigation from '@lucide/svelte/icons/navigation';
+	import MapPin from '@lucide/svelte/icons/map-pin';
 	import Landmark from '@lucide/svelte/icons/landmark';
 	import StatBlock from '$lib/components/trip/StatBlock.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -303,6 +304,24 @@
 		};
 	});
 
+	const pinsByAnchor = $derived.by(() => {
+		const m = new SvelteMap<string, typeof data.tripPins>();
+		for (const pin of data.tripPins) {
+			if (!pin.anchorPlaceId) continue;
+			const list = m.get(pin.anchorPlaceId) ?? [];
+			list.push(pin);
+			m.set(pin.anchorPlaceId, list);
+		}
+		return m;
+	});
+
+	const placeNames = $derived.by(() => {
+		const m: Record<string, string> = { [data.trip.origin.id]: data.trip.origin.displayName };
+		if (data.trip.destination) m[data.trip.destination.id] = data.trip.destination.displayName;
+		for (const st of data.trip.stops) m[st.place.id] = st.place.displayName;
+		return m;
+	});
+
 	const finalLegDistanceLabel: string | null = $derived.by(() => {
 		const lastRoute = data.routes[data.routes.length - 1];
 		return lastRoute ? formatDistance(lastRoute.distanceMeters) : null;
@@ -376,6 +395,23 @@
 		<Landmark class="size-4" aria-hidden="true" />
 		Things to do{count > 0 ? ` (${count})` : ''}
 	</a>
+	{@render pinPreview(placeId)}
+{/snippet}
+
+{#snippet pinPreview(placeId: string)}
+	{@const pins = pinsByAnchor.get(placeId) ?? []}
+	{#if pins.length > 0}
+		<a
+			href="/trips/{data.trip.id}/stops/{placeId}"
+			class="-mt-1 block max-w-full truncate text-xs text-muted-foreground"
+		>
+			<MapPin class="mr-0.5 inline size-3 align-[-1px]" aria-hidden="true" />
+			{pins
+				.slice(0, 2)
+				.map((p) => p.name)
+				.join(', ')}{pins.length > 2 ? ` +${pins.length - 2} more` : ''}
+		</a>
+	{/if}
 {/snippet}
 
 <Tabs.Root bind:value={activeTab} class="gap-0">
@@ -829,6 +865,9 @@
 				active={activeTab === 'map'}
 				{stopStatuses}
 				{legDriven}
+				pins={data.tripPins}
+				{placeNames}
+				tripId={data.trip.id}
 			/>
 
 			<div
