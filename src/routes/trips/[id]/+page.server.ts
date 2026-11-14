@@ -349,7 +349,7 @@ export const actions: Actions = {
 
 		return { success: true };
 	},
-	updateChecklistItemCategory: async ({ request }) => {
+	updateChecklistItemCategory: async ({ params, request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 		const categoryId = formData.get('categoryId') as string;
@@ -357,33 +357,41 @@ export const actions: Actions = {
 		await db
 			.update(schema.checklistItem)
 			.set({ categoryId: categoryId || null })
-			.where(eq(schema.checklistItem.id, id));
+			.where(and(eq(schema.checklistItem.id, id), eq(schema.checklistItem.roadTripId, params.id)));
 
 		return { success: true };
 	},
-	toggleChecklistItem: async ({ request }) => {
+	toggleChecklistItem: async ({ params, request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 		const checked = formData.get('checked') === 'true';
 
-		await db.update(schema.checklistItem).set({ checked }).where(eq(schema.checklistItem.id, id));
+		await db
+			.update(schema.checklistItem)
+			.set({ checked })
+			.where(and(eq(schema.checklistItem.id, id), eq(schema.checklistItem.roadTripId, params.id)));
 
 		return { success: true };
 	},
-	updateChecklistItemCount: async ({ request }) => {
+	updateChecklistItemCount: async ({ params, request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 		const count = parseInt(formData.get('count') as string) || 1;
 
-		await db.update(schema.checklistItem).set({ count }).where(eq(schema.checklistItem.id, id));
+		await db
+			.update(schema.checklistItem)
+			.set({ count })
+			.where(and(eq(schema.checklistItem.id, id), eq(schema.checklistItem.roadTripId, params.id)));
 
 		return { success: true };
 	},
-	deleteChecklistItem: async ({ request }) => {
+	deleteChecklistItem: async ({ params, request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 
-		await db.delete(schema.checklistItem).where(eq(schema.checklistItem.id, id));
+		await db
+			.delete(schema.checklistItem)
+			.where(and(eq(schema.checklistItem.id, id), eq(schema.checklistItem.roadTripId, params.id)));
 
 		return { success: true };
 	},
@@ -405,7 +413,7 @@ export const actions: Actions = {
 
 		return { success: true };
 	},
-	updateStopDuration: async ({ request }) => {
+	updateStopDuration: async ({ params, request }) => {
 		const formData = await request.formData();
 		const placeId = formData.get('placeId') as string;
 		const arrivalTime = formData.get('arrivalTime') as string;
@@ -437,7 +445,12 @@ export const actions: Actions = {
 				durationMinutes,
 				isLayover
 			})
-			.where(eq(schema.roadTripStops.placeId, placeId));
+			.where(
+				and(
+					eq(schema.roadTripStops.placeId, placeId),
+					eq(schema.roadTripStops.roadTripId, params.id)
+				)
+			);
 
 		return { success: true };
 	},
