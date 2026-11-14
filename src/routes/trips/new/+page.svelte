@@ -10,6 +10,9 @@
 	import { CalendarIcon, Plus, Trash2, ChevronLeft } from '@lucide/svelte';
 	import { cn } from '$lib/utils.js';
 	import { DateFormatter, type DateValue, getLocalTimeZone, today } from '@internationalized/date';
+	import type { ActionData } from './$types';
+
+	let { form }: { form: ActionData } = $props();
 
 	const df = new DateFormatter('en-US', {
 		dateStyle: 'long'
@@ -174,6 +177,10 @@
 						<PlaceSearch onSelect={setDestination} />
 					</div>
 				</div>
+
+				{#if form?.message}
+					<p class="text-sm text-destructive">{form.message}</p>
+				{/if}
 
 				<Card.Footer class="px-0 pt-6">
 					<Button type="submit" class="w-full">Create Trip</Button>
